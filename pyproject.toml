@@ -3,7 +3,7 @@ build-backend = "hatchling.build"
 requires = [ "hatchling" ]
 
 [project]
-name = "bacformer-release"
+name = "bacformer"
 version = "0.0.1"
 description = "Generative modeling of whole bacterial genomes."
 readme = "README.md"
@@ -58,7 +58,7 @@ optional-dependencies.test = [
   "pytest",
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
-urls.Documentation = "https://Bacformer-release.readthedocs.io/"
+urls.Documentation = "https://bacformer.readthedocs.io/"
 urls.Homepage = "https://github.com/macwiatrak/Bacformer"
 urls.Source = "https://github.com/macwiatrak/Bacformer"
 
