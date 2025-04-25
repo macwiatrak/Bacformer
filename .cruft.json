@@ -1,0 +1,30 @@
+{
+  "template": "https://github.com/scverse/cookiecutter-scverse",
+  "commit": "83d178f1d000c547cc772368f82568bb72735d39",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "project_name": "Bacfomrer",
+      "package_name": "bacformer",
+      "project_description": "Modeling whole bacterial genomes with contextualised protein modeling.",
+      "author_full_name": "Maciek Wiatrak",
+      "author_email": "macwiatrak@gmail.com",
+      "github_user": "macwiatrak",
+      "github_repo": "Bacformer",
+      "license": "Apache License Version 2.0",
+      "ide_integration": true,
+      "_copy_without_render": [
+        ".github/workflows/build.yaml",
+        ".github/workflows/test.yaml",
+        "docs/_templates/autosummary/**.rst"
+      ],
+      "_render_devdocs": false,
+      "_jinja2_env_vars": {
+        "lstrip_blocks": true,
+        "trim_blocks": true
+      },
+      "_template": "https://github.com/scverse/cookiecutter-scverse"
+    }
+  },
+  "directory": null
+}
