@@ -5,7 +5,7 @@ requires = [ "hatchling" ]
 [project]
 name = "bacformer"
 version = "0.0.1"
-description = "Generative modeling of whole bacterial genomes."
+description = "Modeling bacterial genomes."
 readme = "README.md"
 license = { file = "LICENSE" }
 maintainers = [
@@ -27,12 +27,22 @@ dependencies = [
   "biopython>=1.83",
   "dataclasses>=0.6",
   "dataclasses-json>=0.6.1",
+  # "captum~=0.7.0",
+  "datasets~=2.18.0",
+  "igraph~=0.11.8",
+  "leidenalg~=0.10.2",
+  "pandas>=2.2.3",
+  "pyarrow>=19.0.1",
+  "scanpy>=1.11.1",
   # for debug logging (referenced from the issue template)
   "session-info",
-  "torch>=2.1",
-  "transformers>=4.39.2",
+  "tensorboardx>=2.6.2",
+  "torch~=2.5.1",
+  "torchmetrics>=1.7.1",
+  "transformers>=4.38.2",
   "typed-argument-parser>=1.8.1",
 ]
+
 optional-dependencies.dev = [
   "pre-commit",
   "twine>=4.0.2",
@@ -61,6 +71,11 @@ optional-dependencies.test = [
 urls.Documentation = "https://bacformer.readthedocs.io/"
 urls.Homepage = "https://github.com/macwiatrak/Bacformer"
 urls.Source = "https://github.com/macwiatrak/Bacformer"
+
+faesm = [
+  "flash-attn>=0.2.0",        # If you need the direct flash-attn package
+  "faesm[flash-attn]>=0.1.1",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = [ "bacformer" ]
