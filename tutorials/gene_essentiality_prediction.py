@@ -60,7 +60,7 @@ def run():
     config.num_labels = 1
     config.problem_type = "binary_classification"
     bacformer_model = AutoModelForTokenClassification.from_pretrained(
-        "macwiatrak/bacformer-masked-complete-genomes", config=config, trust_remote_code=True
+        "macwiatrak/bacformer-masked-MAG", config=config, trust_remote_code=True
     ).to(torch.bfloat16)
     print("Nr of parameters:", sum(p.numel() for p in bacformer_model.parameters()))
     print("Nr of trainable parameters:", sum(p.numel() for p in bacformer_model.parameters() if p.requires_grad))
