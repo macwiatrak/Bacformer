@@ -74,11 +74,11 @@ def run():
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=1,
-        learning_rate=0.00015,
+        learning_rate=0.001,
         num_train_epochs=50,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
-        gradient_accumulation_steps=8,
+        gradient_accumulation_steps=16,
         seed=12,
         dataloader_num_workers=4,
         bf16=True,
@@ -96,7 +96,7 @@ def run():
         eval_dataset=dataset["validation"],
         args=training_args,
         compute_metrics=compute_metrics_gene_essentiality_pred,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],
     )
 
     # train the model
