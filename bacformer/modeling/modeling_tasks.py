@@ -60,12 +60,16 @@ class BacformerForProteinClassification(BacformerPreTrainedModel):
         if labels is not None:
             labels = labels.to(logits.device)
 
-            # remove the non-protein embeddings from loss computation
-            print("Special tokens mask shape:", special_tokens_mask.shape)
-            print("Logits shape:", logits.shape)
+            # # remove the non-protein embeddings from loss computation
+            # print("Special tokens mask shape:", special_tokens_mask.shape)
+            # print("Logits shape:", logits.shape)
+            logits = logits[special_tokens_mask != self.config.pad_token_id]
+            labels = labels[special_tokens_mask != self.config.pad_token_id]
+
+            special_tokens_mask = special_tokens_mask[special_tokens_mask != self.config.pad_token_id]
             logits = logits[special_tokens_mask == self.config.prot_emb_token_id]
-            print("Filtered logits shape:", logits.shape)
-            print("Labels shape:", labels.shape)
+            # print("Filtered logits shape:", logits.shape)
+            # print("Labels shape:", labels.shape)
 
             if self.config.problem_type == "regression":
                 loss = mse_loss(logits, labels)
