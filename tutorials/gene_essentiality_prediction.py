@@ -18,12 +18,16 @@ def run():
     # load the dataset
     dataset = load_dataset("macwiatrak/bacbench-essential-genes-protein-sequences")
 
-    # embed the protein sequences with the ESM-2 base model
+    # embed the protein sequences with the ESM-2 base model and map the labels
     for split_name in dataset.keys():
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
             protein_sequences_col="sequence",
             max_n_proteins=9000,
+        )
+        # map the essentiality labels to a binary format
+        dataset[split_name] = dataset[split_name].map(
+            lambda row: {"labels": [float(gene == "Yes") for gene in row["essential"]]}, batched=False
         )
 
     # load the Bacformer model for protein classification
