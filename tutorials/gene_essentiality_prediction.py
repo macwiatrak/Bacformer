@@ -23,7 +23,8 @@ def adjust_prot_labels(
     """Adjust the protein labels to a binary format ccounting for Bacformer."""
     # convert the labels to a binary format
     output = []
-    for token in special_tokens.squeeze():
+    print("special_tokens len:", len(special_tokens))
+    for token in special_tokens:
         if token == prot_emb_token_id:
             label = labels.pop(0)
             output.append(1 if label == "Yes" else 0)
