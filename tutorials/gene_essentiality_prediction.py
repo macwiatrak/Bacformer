@@ -14,6 +14,25 @@ from datasets import load_dataset
 from transformers import AutoConfig, EarlyStoppingCallback, TrainingArguments
 
 
+def adjust_prot_labels(
+    labels: list[str],
+    special_tokens: torch.Tensor,
+    prot_emb_token_id: int = SPECIAL_TOKENS_DICT["PROT_EMB"],
+    ignore_index: int = -100,
+) -> dict[str, torch.Tensor]:
+    """Adjust the protein labels to a binary format ccounting for Bacformer."""
+    # convert the labels to a binary format
+    output = []
+    for token in special_tokens.squeeze():
+        if token == prot_emb_token_id:
+            label = labels.pop(0)
+            output.append(1 if label == "Yes" else 0)
+        else:
+            output.append(ignore_index)
+    assert len(output) == special_tokens.shape[1], "Nr of labels does not match special tokens length."
+    return {"labels": torch.tensor(output, dtype=torch.long)}
+
+
 def run():
     """Train the gene essentiality prediction model."""
     # load the dataset
@@ -28,7 +47,11 @@ def run():
         )
         # map the essentiality labels to a binary format
         dataset[split_name] = dataset[split_name].map(
-            lambda row: {"labels": [float(gene == "Yes") for gene in row["essential"]]}, batched=False
+            lambda row: adjust_prot_labels(
+                labels=row["essential"],
+                special_tokens=row["special_tokens_mask"],
+            ),
+            batched=False,
         )
 
     # load the Bacformer model for protein classification
