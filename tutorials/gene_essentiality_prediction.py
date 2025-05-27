@@ -4,14 +4,13 @@ from functools import partial
 import torch
 from bacformer.modeling import (
     SPECIAL_TOKENS_DICT,
-    BacformerForProteinClassification,
     BacformerTrainer,
     collate_genome_samples,
     compute_metrics_gene_essentiality_pred,
 )
 from bacformer.pp import dataset_col_to_bacformer_inputs
 from datasets import load_dataset
-from transformers import AutoConfig, EarlyStoppingCallback, TrainingArguments
+from transformers import AutoConfig, AutoModelForTokenClassification, EarlyStoppingCallback, TrainingArguments
 
 
 def adjust_prot_labels(
@@ -21,12 +20,13 @@ def adjust_prot_labels(
     ignore_index: int = -100,
 ) -> dict[str, torch.Tensor]:
     """Adjust the protein labels to a binary format ccounting for Bacformer."""
-    # convert the labels to a binary format
     output = []
     for token in special_tokens[0]:
+        # if the token is a protein embedding token, we pop the first label from the list
         if token == prot_emb_token_id:
             label = labels.pop(0)
             output.append(1 if label == "Yes" else 0)
+        # if the token is a special token, we append the ignore index
         else:
             output.append(ignore_index)
     return {"labels": torch.tensor(output, dtype=torch.long)}
@@ -42,7 +42,7 @@ def run():
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
             protein_sequences_col="sequence",
-            max_n_proteins=6000,
+            max_n_proteins=7000,
         )
         # map the essentiality labels to a binary format
         dataset[split_name] = dataset[split_name].map(
@@ -59,7 +59,7 @@ def run():
     config = AutoConfig.from_pretrained("macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True)
     config.num_labels = 1
     config.problem_type = "binary_classification"
-    bacformer_model = BacformerForProteinClassification.from_pretrained(
+    bacformer_model = AutoModelForTokenClassification.from_pretrained(
         "macwiatrak/bacformer-masked-complete-genomes", config=config, trust_remote_code=True
     ).to(torch.bfloat16)
     print("Nr of parameters:", sum(p.numel() for p in bacformer_model.parameters()))
@@ -79,7 +79,7 @@ def run():
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=16,
-        seed=42,
+        seed=12,
         dataloader_num_workers=4,
         bf16=True,
         metric_for_best_model="eval_macro_auroc",
@@ -88,7 +88,7 @@ def run():
     )
 
     # define a collate function for the dataset
-    collate_genome_samples_fn = partial(collate_genome_samples, SPECIAL_TOKENS_DICT["PAD"], 6000, 1000)
+    collate_genome_samples_fn = partial(collate_genome_samples, SPECIAL_TOKENS_DICT["PAD"], 7000, 1000)
     trainer = BacformerTrainer(
         model=bacformer_model,
         data_collator=collate_genome_samples_fn,
