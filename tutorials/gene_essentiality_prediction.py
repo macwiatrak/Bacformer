@@ -4,13 +4,14 @@ from functools import partial
 import torch
 from bacformer.modeling import (
     SPECIAL_TOKENS_DICT,
+    BacformerForProteinClassification,
     BacformerTrainer,
     collate_genome_samples,
     compute_metrics_gene_essentiality_pred,
 )
 from bacformer.pp import dataset_col_to_bacformer_inputs
 from datasets import load_dataset
-from transformers import AutoModelForTokenClassification, EarlyStoppingCallback, TrainingArguments
+from transformers import EarlyStoppingCallback, TrainingArguments
 
 
 def run():
@@ -33,7 +34,7 @@ def run():
     # load the Bacformer model for protein classification
     # for this task we use the Bacformer model trained on masked complete genomes
     # with a token (here protein) classification head
-    bacformer_model = AutoModelForTokenClassification.from_pretrained(
+    bacformer_model = BacformerForProteinClassification.from_pretrained(
         "macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True
     ).to(torch.bfloat16)
     print("Nr of parameters:", sum(p.numel() for p in bacformer_model.parameters()))
