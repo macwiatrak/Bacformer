@@ -159,7 +159,7 @@ def collate_genome_samples(
     # print(prot_emb[1].shape)
     prot_emb = pad_sequence(
         [
-            torch.tensor(sample["protein_embeddings"].squeeze(0)[:max_n_proteins], dtype=torch.float32)
+            torch.tensor(sample["protein_embeddings"], dtype=torch.float32).squeeze(0)[:max_n_proteins]
             for sample in samples
         ],
         batch_first=True,
@@ -167,21 +167,21 @@ def collate_genome_samples(
     )
     special_tokens_mask = pad_sequence(
         [
-            torch.tensor(sample["special_tokens_mask"].squeeze(0)[:max_n_proteins], dtype=torch.long)
+            torch.tensor(sample["special_tokens_mask"], dtype=torch.long).squeeze(0)[:max_n_proteins]
             for sample in samples
         ],
         batch_first=True,
         padding_value=pad_token_id,
     )
     token_type_ids = pad_sequence(
-        [torch.tensor(sample["token_type_ids"].squeeze(0)[:max_n_proteins], dtype=torch.long) for sample in samples],
+        [torch.tensor(sample["token_type_ids"], dtype=torch.long).squeeze(0)[:max_n_proteins] for sample in samples],
         batch_first=True,
         padding_value=max_n_contigs,
     )
 
     if "labels" in samples[0]:
         labels = pad_sequence(
-            [torch.tensor(sample["labels"].squeeze(0)[:max_n_proteins], dtype=torch.long) for sample in samples],
+            [torch.tensor(sample["labels"], dtype=torch.long).squeeze(0)[:max_n_proteins] for sample in samples],
             batch_first=True,
             padding_value=-100,
         )
@@ -197,7 +197,7 @@ def collate_genome_samples(
     if "attention_mask" in samples[0]:
         padding_mask = pad_sequence(
             [
-                torch.tensor(sample["attention_mask"].squeeze(0)[:max_n_proteins], dtype=torch.float32)
+                torch.tensor(sample["attention_mask"], dtype=torch.float32).squeeze(0)[:max_n_proteins]
                 for sample in samples
             ],
             batch_first=True,
