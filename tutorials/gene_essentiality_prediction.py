@@ -81,6 +81,11 @@ def run():
     test_output.predictions.squeeze(-1)
     print(test_output.predictions.shape)
     print(test_output.label_ids.shape)
+
+    torch.save(
+        {"predictions": test_output.predictions.squeeze(-1), "labels": test_output.label_ids},
+        "test_preds_and_labels.pt",
+    )
     # save the predictions and labels
 
     # plot the distribution of the predictions for a given genome of essential vs non-essential genes

@@ -265,7 +265,6 @@ def protein_embeddings_to_inputs(
     sep_token_id: int = SPECIAL_TOKENS_DICT["CLS"],
     prot_emb_token_id: int = SPECIAL_TOKENS_DICT["PROT_EMB"],
     end_token_id: int = SPECIAL_TOKENS_DICT["END"],
-    torch_dtype: torch.dtype = torch.bfloat16,
 ) -> dict[str, torch.Tensor]:
     """Convert protein embeddings to inputs for Bacformer model.
 
@@ -290,7 +289,7 @@ def protein_embeddings_to_inputs(
 
     # preprocess protein embeddings
     dim = len(protein_embeddings[0][0])
-    pad_emb = torch.zeros(dim, dtype=torch_dtype)
+    pad_emb = torch.zeros(dim, dtype=torch.float32)
 
     special_tokens_mask = [cls_token_id]
     protein_embeddings_output = [pad_emb]
@@ -306,7 +305,7 @@ def protein_embeddings_to_inputs(
             # append prot_emb_token_id to special tokens mask
             special_tokens_mask.append(prot_emb_token_id)
             # append prot_emb to protein_embeddings_output
-            protein_embeddings_output.append(torch.tensor(prot_emb, dtype=torch_dtype))
+            protein_embeddings_output.append(torch.tensor(prot_emb, dtype=torch.float32))
             # append contig_idx to token_type_ids
             token_type_ids.append(contig_idx)
         # separate the contigs with a SEP token
@@ -383,7 +382,6 @@ def protein_seqs_to_bacformer_inputs(
         sep_token_id=SPECIAL_TOKENS_DICT["CLS"],
         prot_emb_token_id=SPECIAL_TOKENS_DICT["PROT_EMB"],
         end_token_id=SPECIAL_TOKENS_DICT["END"],
-        torch_dtype=torch.bfloat16,
     )
 
     # move inputs to the same device as the model
@@ -421,7 +419,7 @@ def compute_bacformer_embeddings(
     # Compute Bacformer embeddings
     with torch.no_grad():
         bacformer_embeddings = model(
-            protein_embeddings=inputs["protein_embeddings"],
+            protein_embeddings=inputs["protein_embeddings"].type(model.dtype),
             special_tokens_mask=inputs["special_tokens_mask"],
             token_type_ids=inputs["token_type_ids"],
             attention_mask=inputs["attention_mask"],
@@ -502,7 +500,7 @@ def dataset_col_to_bacformer_inputs(
     max_n_proteins: int = 9000,
     max_n_contigs: int = 1000,
     device: str = None,
-) -> dict[str, torch.Tensor]:
+) -> Dataset:
     """Convert protein sequences to inputs for Bacformer model.
 
     Args:
@@ -542,7 +540,6 @@ def dataset_col_to_bacformer_inputs(
             protein_embeddings=row["protein_embeddings"],
             max_n_proteins=max_n_proteins,
             max_n_contigs=max_n_contigs,
-            torch_dtype=torch.bfloat16,
         ),
         batched=False,
         remove_columns=["protein_embeddings"],
@@ -562,7 +559,6 @@ def embed_dataset_col_with_bacformer(
     max_n_contigs: int = 1000,
     genome_pooling_method: Literal["mean", "max"] = None,
     device: str = None,
-    torch_dtype: torch.dtype = torch.bfloat16,
 ) -> Dataset:
     """Embed protein sequences in a dataset using Bacformer.
 
@@ -578,7 +574,6 @@ def embed_dataset_col_with_bacformer(
         max_n_contigs (int): Maximum number of contigs to use for each genome.
         genome_pooling_method (str): Pooling method for genome level embedding, either "mean" or "max".
         device (str): Device to use for computation, e.g., "cuda" or "cpu".
-        torch_dtype (torch.dtype): Data type for PyTorch tensors.
 
     Returns
     -------
@@ -589,7 +584,7 @@ def embed_dataset_col_with_bacformer(
 
     # load Bacformer model
     bacformer_model = (
-        AutoModel.from_pretrained(bacformer_model_path, trust_remote_code=True).to(device).eval().to(torch_dtype)
+        AutoModel.from_pretrained(bacformer_model_path, trust_remote_code=True).to(device).eval().to(torch.bfloat16)
     )
 
     # embed protein sequences with Bacformer
