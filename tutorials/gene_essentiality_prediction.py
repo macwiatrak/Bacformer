@@ -56,7 +56,7 @@ def run():
     # load the Bacformer model for protein classification
     # for this task we use the Bacformer model trained on masked complete genomes
     # with a token (here protein) classification head
-    config = AutoConfig.from_pretrained("macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True)
+    config = AutoConfig.from_pretrained("macwiatrak/bacformer-masked-MAG", trust_remote_code=True)
     config.num_labels = 1
     config.problem_type = "binary_classification"
     bacformer_model = AutoModelForTokenClassification.from_pretrained(
@@ -78,7 +78,7 @@ def run():
         num_train_epochs=100,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
-        gradient_accumulation_steps=16,
+        gradient_accumulation_steps=8,
         seed=12,
         dataloader_num_workers=4,
         bf16=True,
