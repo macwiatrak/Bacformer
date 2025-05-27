@@ -23,16 +23,12 @@ def adjust_prot_labels(
     """Adjust the protein labels to a binary format ccounting for Bacformer."""
     # convert the labels to a binary format
     output = []
-    print("special_tokens len:", len(special_tokens[0]))
-    print("special_tokens dtype:", type(special_tokens))
-    print("special_tokens dtype [0]:", type(special_tokens[0]))
     for token in special_tokens[0]:
         if token == prot_emb_token_id:
             label = labels.pop(0)
             output.append(1 if label == "Yes" else 0)
         else:
             output.append(ignore_index)
-    assert len(output) == special_tokens.shape[1], "Nr of labels does not match special tokens length."
     return {"labels": torch.tensor(output, dtype=torch.long)}
 
 
