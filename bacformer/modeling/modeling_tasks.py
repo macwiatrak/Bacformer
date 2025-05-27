@@ -64,8 +64,9 @@ class BacformerForProteinClassification(BacformerPreTrainedModel):
             print("Special tokens mask shape:", special_tokens_mask.shape)
             print("Logits shape:", logits.shape)
             logits = logits[special_tokens_mask == self.config.prot_emb_token_id]
+            labels = labels[special_tokens_mask == self.config.prot_emb_token_id]
             print("Filtered logits shape:", logits.shape)
-            print(special_tokens_mask.unique())
+            print("Labels shape:", labels.shape)
 
             if self.config.problem_type == "regression":
                 loss = mse_loss(logits, labels)
