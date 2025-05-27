@@ -149,11 +149,14 @@ def fetch_training_data(
 
 def collate_genome_samples(
     pad_token_id: int = 0,
-    max_n_proteins: int = 6000,
+    max_n_proteins: int = 9000,
     max_n_contigs: int = 1000,
     samples: list[dict] = None,
 ) -> dict[str, torch.Tensor]:
     """Collate function for GenomeSample."""
+    prot_emb = [torch.tensor(sample["protein_embeddings"][:max_n_proteins], dtype=torch.float32) for sample in samples]
+    print(prot_emb[0].shape)
+    print(prot_emb[1].shape)
     prot_emb = pad_sequence(
         [torch.tensor(sample["protein_embeddings"][:max_n_proteins], dtype=torch.float32) for sample in samples],
         batch_first=True,
