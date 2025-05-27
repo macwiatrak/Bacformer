@@ -14,6 +14,8 @@ whole-bacterial genomes as a sequence of proteins ordered by their genomic coord
 It takes as input average protein embeddings from protein language models and computes contextualised protein
 embeddings conditional on other proteis present in the genome. Bacformer is trained on a diverse dataset of ~1.3M bacterial genomes and ~3B proteins.
 
+![Bacformer](files/Bacformer.png)
+
 Bacformer can be applied to a wide range of tasks, including: strain clustering, essential genes prediction, operon identification,
 ppi prediction, protein function prediction and more. We provide [model checkpoints]() for pretrained models as well as Bacformer
 finetuned for various tasks. We also provide tutorials and make Bacformer available via [HuggingFace](https://huggingface.co/macwiatrak).
@@ -90,43 +92,46 @@ inputs = protein_seqs_to_bacformer_inputs(
     protein_sequences,
     device=device,
     batch_size=128,  # the batch size for computing the protein embeddings
-    max_length=6000,  # the maximum number of proteins Bacformer was trained with
+    max_n_proteins=6000,  # the maximum number of proteins Bacformer was trained with
 )
 
+# move the inputs to the device
+inputs = {k: v.to(device) for k, v in inputs.items()}
 # compute contextualized protein embeddings with Bacformer
 with torch.no_grad():
-    outputs = model(*inputs, return_dict=True)
+    outputs = model(**inputs, return_dict=True)
 
 print('last hidden state shape:', outputs["last_hidden_state"].shape)  # (batch_size, max_length, hidden_size)
 print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)  # (batch_size, hidden_size)
-
 ```
 
 ### Tutorials
 
 We provide a set of tutorials to help you get started with Bacformer. The tutorials cover the following topics:
-- [Bacformer for essential genes prediction]()
-- [Bacformer for operon prediction]()
-- [Bacformer for protein–protein interaction prediction]()
-- [Bacformer for phenotypic traits prediction]()
-- [Bacformer for scalable search of similar bacteria]()
+- [Bacformer for strain clustering](tutorials/strain_clustering.ipynb)
+- [Bacformer for essential genes prediction](tutorials/essential_genes_prediction.ipynb)
+- [Bacformer for operon prediction](tutorials/operon_prediction.ipynb)
+- [Bacformer for protein–protein interaction prediction](tutorials/protein_protein_interaction_prediction.ipynb)
+- [Bacformer for phenotypic traits prediction](tutorials/phenotypic_traits_prediction.ipynb)
+- [Bacformer for scalable search of similar bacteria](tutorials/scalable_search_of_similar_bacteria.ipynb)
 
 ## HuggingFace
 
 Bacformer is integrated with [HuggingFace](https://huggingface.co/macwiatrak).
 
 ```python
+import torch
 from transformers import AutoModel, AutoModelForMaskedLM, AutoModelForCausalLM
 
 # load the Bacformer model trained with an autoregressive objective
-causal_model = AutoModelForCausalLM.from_pretrained("macwiatrak/bacformer-causal-MAG")
+causal_model = AutoModelForCausalLM.from_pretrained("macwiatrak/bacformer-causal-MAG", trust_remote_code=True).to(torch.bfloat16).eval()
 
 # load the Bacformer model trained with a masked objective
-masked_model = AutoModelForMaskedLM.from_pretrained("macwiatrak/bacformer-masked-MAG")
+masked_model = AutoModelForMaskedLM.from_pretrained("macwiatrak/bacformer-masked-MAG", trust_remote_code=True).to(torch.bfloat16).eval()
 
 # load the Bacformer encoder model finetuned on complete genomes (i.e. without the protein family classification head)
-# we recommend using this model as a start for finetuning on your own dataset for all tasks except generation
-encoder_model = AutoModel.from_pretrained("macwiatrak/bacformer-masked-complete-genomes")
+# we recommend using this model for complete genomes as a start for finetuning on your own dataset for all tasks except generation
+encoder_model = AutoModel.from_pretrained("macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True).to(torch.bfloat16).eval()
 ```
 
 ## Pretrained model checkpoints

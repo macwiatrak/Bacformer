@@ -27,9 +27,10 @@ dependencies = [
   "biopython>=1.83",
   "dataclasses>=0.6",
   "dataclasses-json>=0.6.1",
-  # "captum~=0.7.0",
   "datasets~=2.18.0",
+  "hf-xet~=1.0.5",
   "igraph~=0.11.8",
+  "jupyterlab",
   "leidenalg~=0.10.2",
   "pandas>=2.2.3",
   "pyarrow>=19.0.1",
@@ -63,6 +64,10 @@ optional-dependencies.doc = [
   "sphinxcontrib-bibtex>=1",
   "sphinxext-opengraph",
 ]
+optional-dependencies.faesm = [
+  "faesm[flash-attn]>=0.1.1",
+  "flash-attn>=0.2",          # If you need the direct flash-attn package
+]
 optional-dependencies.test = [
   "coverage",
   "pytest",
@@ -71,11 +76,6 @@ optional-dependencies.test = [
 urls.Documentation = "https://bacformer.readthedocs.io/"
 urls.Homepage = "https://github.com/macwiatrak/Bacformer"
 urls.Source = "https://github.com/macwiatrak/Bacformer"
-
-faesm = [
-  "flash-attn>=0.2.0",        # If you need the direct flash-attn package
-  "faesm[flash-attn]>=0.1.1",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = [ "bacformer" ]

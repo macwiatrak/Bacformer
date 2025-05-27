@@ -3,10 +3,15 @@ import re
 from collections.abc import Callable
 from typing import Literal
 
+import numpy as np
+import pandas as pd
+import torch
+from datasets import Dataset
 from transformers import AutoModel, AutoTokenizer
 
-from bacformer.modeling import BacformerModel
 from bacformer.modeling.config import SPECIAL_TOKENS_DICT
+
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s: %(message)s")
 
 try:
     from faesm.esm import FAEsmForMaskedLM
@@ -20,11 +25,6 @@ except ImportError:
         "Defaulting to use HuggingFace implementation. "
         "Please consider installing faESM: https://github.com/pengzhangzhi/faplm"
     )
-
-
-import numpy as np
-import pandas as pd
-import torch
 
 
 def load_plm(
@@ -182,8 +182,8 @@ def embed_genome_protein_sequences(
     model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
     batch_size: int = 64,
     max_seq_len: int = 1024,
-    device: str = None,
     genome_pooling_method: Literal["mean", "max"] = None,
+    return_dict: bool = False,
 ) -> list[np.ndarray] | np.ndarray:
     """Embed genome protein sequences using pretrained models.
 
@@ -250,6 +250,10 @@ def embed_genome_protein_sequences(
     prot_seqs_df = prot_seqs_df.groupby("contig_id")["protein_embedding"].apply(list).reset_index()
     # convert to list of lists
     protein_embeddings = prot_seqs_df["protein_embedding"].tolist()
+
+    if return_dict:
+        # return as a dictionary
+        return {"protein_embeddings": protein_embeddings}
     return protein_embeddings
 
 
@@ -321,20 +325,22 @@ def protein_embeddings_to_inputs(
     token_type_ids = torch.tensor(token_type_ids)
 
     attention_mask = torch.ones_like(special_tokens_mask)
+
+    # unsqueeze to add batch dimension
     return {
-        "protein_embeddings": protein_embeddings_output,
-        "special_tokens_mask": special_tokens_mask,
-        "token_type_ids": token_type_ids,
-        "attention_mask": attention_mask,
+        "protein_embeddings": protein_embeddings_output.unsqueeze(0),
+        "special_tokens_mask": special_tokens_mask.unsqueeze(0),
+        "token_type_ids": token_type_ids.unsqueeze(0),
+        "attention_mask": attention_mask.unsqueeze(0),
     }
 
 
 def protein_seqs_to_bacformer_inputs(
     protein_sequences: list[str],
-    model_path: str = "facebook/esm2_t12_35M_UR50D",
-    model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
+    plm_model_path: str = "facebook/esm2_t12_35M_UR50D",
+    plm_model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
     batch_size: int = 64,
-    max_seq_len: int = 1024,
+    max_prot_seq_len: int = 1024,
     max_n_proteins: int = 6000,
     max_n_contigs: int = 1000,
     device: str = None,
@@ -346,7 +352,7 @@ def protein_seqs_to_bacformer_inputs(
         model_path (str): The path to the pretrained model.
         model_type (str): The type of the model, either "esm2" or "esmc".
         batch_size (int): The batch size to use for processing.
-        max_seq_len (int): The maximum sequence length for the model.
+        max_prot_seq_len (int): The maximum protein sequence length for the model.
         max_n_proteins (int): The maximum number of proteins to use for each genome.
         max_n_contigs (int): The maximum number of contigs to use for each genome.
 
@@ -355,16 +361,16 @@ def protein_seqs_to_bacformer_inputs(
         dict: The inputs for the Bacformer model.
     """
     # load the model
-    model, tokenizer = load_plm(model_path=model_path, model_type=model_type, device=device)
+    model, tokenizer = load_plm(model_path=plm_model_path, model_type=plm_model_type, device=device)
 
     # generate protein embeddings
     protein_embeddings = embed_genome_protein_sequences(
         model=model,
         tokenizer=tokenizer,
         protein_sequences=protein_sequences,
-        model_type=model_type,
+        model_type=plm_model_type,
         batch_size=batch_size,
-        max_seq_len=max_seq_len,
+        max_seq_len=max_prot_seq_len,
         genome_pooling_method=None,
     )
 
@@ -380,13 +386,14 @@ def protein_seqs_to_bacformer_inputs(
         torch_dtype=torch.bfloat16,
     )
 
-    return inputs
+    # move inputs to the same device as the model
+    return {k: v.to(device) for k, v in inputs.items()}
 
 
 def compute_bacformer_embeddings(
-    model: BacformerModel,
+    model: Callable,
     protein_embeddings: list[list[np.ndarray]] | list[np.ndarray],
-    max_n_proteins: int = 6000,
+    max_n_proteins: int = 9000,
     max_n_contigs: int = 1000,
     genome_pooling_method: Literal["mean", "max"] = None,
 ) -> np.ndarray:
@@ -430,35 +437,177 @@ def compute_bacformer_embeddings(
     return bacformer_embeddings.squeeze().cpu().numpy()
 
 
-def embed_genome(
-    protein_sequences: list[str] | list[list[str]],
-    bacformer_model: BacformerModel,
-    esm_model: Callable,
-    max_n_proteins: int = 6000,
-    max_n_contigs: int = 1000,
-    contig_ids: list[str] = None,
-    prot_embed_batch_size: int = 64,
+def protein_seqs_to_bacformer_embeddings(
+    protein_sequences: list[str],
+    bacformer_model: Callable,
+    plm_model: Callable,
+    plm_tokenizer: Callable,
+    plm_model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
+    batch_size: int = 64,
     max_prot_seq_len: int = 1024,
+    max_n_proteins: int = 9000,
+    max_n_contigs: int = 1000,
     genome_pooling_method: Literal["mean", "max"] = None,
-):
-    """Add docstrings"""
-    # embed protein sequences with ESM model
+    return_dict: bool = False,
+) -> np.ndarray | dict[str, np.ndarray]:
+    """Convert protein sequences to Bacformer embeddings.
+
+    Args:
+        protein_sequences (List[str]): The protein sequences to convert.
+        bacformer_model (Callable): The Bacformer model to use for embedding.
+        plm_model (Callable): The pretrained model to use for generating embeddings.
+        plm_tokenizer (Callable): The tokenizer for the pretrained model.
+        plm_model_type (str): The type of the pretrained model, either "esm2" or "esmc".
+        batch_size (int): The batch size to use for processing.
+        max_prot_seq_len (int): The maximum protein sequence length for the model.
+        max_n_proteins (int): The maximum number of proteins to use for each genome.
+        max_n_contigs (int): The maximum number of contigs to use for each genome.
+        genome_pooling_method (str): The pooling method to use for the genome level embedding.
+
+    Returns
+    -------
+        np.ndarray | dict[str, np.ndarray]: The Bacformer embeddings for the input protein sequences.
+    """
+    # embed protein sequences with the ESM-2 base model
     protein_embeddings = embed_genome_protein_sequences(
-        model=esm_model,
+        model=plm_model,
+        tokenizer=plm_tokenizer,
         protein_sequences=protein_sequences,
-        contig_ids=contig_ids,
-        model_type="esm2",
-        batch_size=prot_embed_batch_size,
+        model_type=plm_model_type,
+        batch_size=batch_size,
         max_seq_len=max_prot_seq_len,
         genome_pooling_method=None,
     )
 
-    # use Bacformer to compute contextualised protein representations
-    bacformer_embed = compute_bacformer_embeddings(
+    # convert protein embeddings to inputs
+    bacformer_embeddings = compute_bacformer_embeddings(
         model=bacformer_model,
         protein_embeddings=protein_embeddings,
         max_n_proteins=max_n_proteins,
         max_n_contigs=max_n_contigs,
         genome_pooling_method=genome_pooling_method,
     )
-    return bacformer_embed
+    if return_dict:
+        return {"embeddings": bacformer_embeddings}
+    return bacformer_embeddings
+
+
+def dataset_col_to_bacformer_inputs(
+    dataset: Dataset,
+    protein_sequences_col: str,
+    plm_model_path: str = "facebook/esm2_t12_35M_UR50D",
+    plm_model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
+    batch_size: int = 64,
+    max_prot_seq_len: int = 1024,
+    max_n_proteins: int = 9000,
+    max_n_contigs: int = 1000,
+    device: str = None,
+) -> dict[str, torch.Tensor]:
+    """Convert protein sequences to inputs for Bacformer model.
+
+    Args:
+        protein_sequences (List[str]): The protein sequences to convert.
+        model_path (str): The path to the pretrained model.
+        model_type (str): The type of the model, either "esm2" or "esmc".
+        batch_size (int): The batch size to use for processing.
+        max_prot_seq_len (int): The maximum protein sequence length for the model.
+        max_n_proteins (int): The maximum number of proteins to use for each genome.
+        max_n_contigs (int): The maximum number of contigs to use for each genome.
+
+    Returns
+    -------
+        dict: The inputs for the Bacformer model.
+    """
+    # load the model
+    model, tokenizer = load_plm(model_path=plm_model_path, model_type=plm_model_type, device=device)
+
+    # protein sequences to protein embeddings
+    dataset = dataset.map(
+        lambda row: embed_genome_protein_sequences(
+            model=model,
+            tokenizer=tokenizer,
+            protein_sequences=row[protein_sequences_col],
+            model_type=plm_model_type,
+            batch_size=batch_size,
+            max_seq_len=max_prot_seq_len,
+            genome_pooling_method=None,
+            return_dict=True,
+        ),
+        batched=False,
+        remove_columns=[protein_sequences_col],
+    )
+    # protein embeddings to Bacformer inputs
+    dataset = dataset.map(
+        lambda row: protein_embeddings_to_inputs(
+            protein_embeddings=row["protein_embeddings"],
+            max_n_proteins=max_n_proteins,
+            max_n_contigs=max_n_contigs,
+            torch_dtype=torch.bfloat16,
+        ),
+        batched=False,
+        remove_columns=["protein_embeddings"],
+    )
+    return dataset
+
+
+def embed_dataset_col_with_bacformer(
+    dataset: Dataset,
+    protein_sequences_col: str,
+    bacformer_model_path: str = "macwiatrak/bacformer-masked-complete-genomes",
+    plm_model_path: str = "facebook/esm2_t12_35M_UR50D",
+    plm_model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
+    batch_size: int = 128,
+    max_prot_seq_len: int = 1024,
+    max_n_proteins: int = 9000,
+    max_n_contigs: int = 1000,
+    genome_pooling_method: Literal["mean", "max"] = None,
+    device: str = None,
+    torch_dtype: torch.dtype = torch.bfloat16,
+) -> Dataset:
+    """Embed protein sequences in a dataset using Bacformer.
+
+    Args:
+        dataset (Dataset): The dataset containing protein sequences.
+        protein_sequences_col (str): The column name containing protein sequences.
+        bacformer_model_path (str): Path to the Bacformer model.
+        plm_model_path (str): Path to the pretrained language model.
+        plm_model_type (str): Type of the pretrained language model, either "esm2", "esmc", or "protbert".
+        batch_size (int): Batch size for processing sequences.
+        max_prot_seq_len (int): Maximum protein sequence length for the model.
+        max_n_proteins (int): Maximum number of proteins to use for each genome.
+        max_n_contigs (int): Maximum number of contigs to use for each genome.
+        genome_pooling_method (str): Pooling method for genome level embedding, either "mean" or "max".
+        device (str): Device to use for computation, e.g., "cuda" or "cpu".
+        torch_dtype (torch.dtype): Data type for PyTorch tensors.
+
+    Returns
+    -------
+        Dataset: The dataset with embedded protein sequences.
+    """
+    # load pLM model
+    plm_model, plm_tokenizer = load_plm(model_path=plm_model_path, model_type=plm_model_type, device=device)
+
+    # load Bacformer model
+    bacformer_model = (
+        AutoModel.from_pretrained(bacformer_model_path, trust_remote_code=True).to(device).eval().to(torch_dtype)
+    )
+
+    # embed protein sequences with Bacformer
+    dataset = dataset.map(
+        lambda row: protein_seqs_to_bacformer_embeddings(
+            protein_sequences=row[protein_sequences_col],
+            bacformer_model=bacformer_model,
+            plm_model=plm_model,
+            plm_tokenizer=plm_tokenizer,
+            plm_model_type=plm_model_type,
+            batch_size=batch_size,
+            max_prot_seq_len=max_prot_seq_len,
+            max_n_proteins=max_n_proteins,
+            max_n_contigs=max_n_contigs,
+            genome_pooling_method=genome_pooling_method,
+            return_dict=True,
+        ),
+        batched=False,
+        remove_columns=[protein_sequences_col],
+    )
+    return dataset

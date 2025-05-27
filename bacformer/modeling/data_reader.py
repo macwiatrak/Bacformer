@@ -154,7 +154,6 @@ def collate_genome_samples(
     samples: list[dict] = None,
 ) -> dict[str, torch.Tensor]:
     """Collate function for GenomeSample."""
-    samples = [sample["processed_data"] for sample in samples]
     prot_emb = pad_sequence(
         [torch.tensor(sample["protein_embeddings"][:max_n_proteins], dtype=torch.float32) for sample in samples],
         batch_first=True,

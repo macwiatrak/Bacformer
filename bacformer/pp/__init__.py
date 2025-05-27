@@ -5,6 +5,7 @@ from .embed_prot_seqs import (
     embed_genome_protein_sequences,
     protein_embeddings_to_inputs,
     protein_seqs_to_bacformer_inputs,
+    dataset_col_to_bacformer_inputs,
 )
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "embed_genome_protein_sequences",
     "protein_embeddings_to_inputs",
     "protein_seqs_to_bacformer_inputs",
+    "dataset_col_to_bacformer_inputs",
 ]

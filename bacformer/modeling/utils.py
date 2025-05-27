@@ -4,6 +4,7 @@ import os
 import numpy as np
 import torch
 from torch.nn.functional import cross_entropy, softmax
+from torchmetrics.functional import accuracy, auroc, average_precision, f1_score, precision, recall
 from transformers import EvalPrediction
 
 from bacformer.modeling.config import SPECIAL_TOKENS_DICT
@@ -147,3 +148,82 @@ def top_p_filtering(logits: torch.Tensor, top_p: float = 0.9):
         logits[i, remove_indices] = float("-inf")
 
     return logits
+
+
+def compute_metrics_gene_essentiality_pred(preds: EvalPrediction, ignore_index: int = -100, prefix: str = "eval"):
+    """Compute metrics for the prediction step of gene essentiality task."""
+    logits = torch.tensor(preds.predictions).squeeze(-1)
+    labels = torch.tensor(preds.label_ids)
+    # delete to save space
+    del preds
+    # compute metrics
+    acc = accuracy(
+        logits,
+        labels,
+        task="binary",
+        ignore_index=ignore_index,
+    )
+    f1 = f1_score(
+        logits,
+        labels,
+        task="binary",
+        ignore_index=ignore_index,
+    )
+    prec = precision(logits, labels, task="binary", ignore_index=ignore_index)
+    rec = recall(logits, labels, task="binary", ignore_index=ignore_index)
+    auroc_val = auroc(logits, labels, task="binary", ignore_index=ignore_index)
+    auprc = average_precision(logits, labels, task="binary", ignore_index=ignore_index)
+
+    macro_auroc_val = torch.tensor(
+        [
+            auroc(logits[idx, :], labels[idx, :], task="binary", ignore_index=ignore_index)
+            for idx in range(logits.shape[0])
+        ]
+    ).median()
+    macro_auprc = torch.tensor(
+        [
+            average_precision(logits[idx, :], labels[idx, :], task="binary", ignore_index=ignore_index)
+            for idx in range(logits.shape[0])
+        ]
+    ).median()
+
+    return {
+        f"{prefix}_macro_auroc": macro_auroc_val,
+        f"{prefix}_macro_auprc": macro_auprc,
+        f"{prefix}_auroc": auroc_val,
+        f"{prefix}_auprc": auprc,
+        f"{prefix}_accuracy": acc,
+        f"{prefix}_f1": f1,
+        f"{prefix}_precision": prec,
+        f"{prefix}_recall": rec,
+    }
+
+
+def compute_metrics_binary_genome_pred(preds: EvalPrediction, ignore_index: int = -100, prefix: str = "eval"):
+    """Compute metrics for the prediction step of predicting genome phenotype."""
+    logits = torch.tensor(preds.predictions).squeeze(-1)
+    labels = torch.tensor(preds.label_ids)
+    # delete to save space
+    del preds
+    # compute metrics
+    acc = accuracy(
+        logits,
+        labels,
+        task="binary",
+        ignore_index=ignore_index,
+    )
+    f1 = f1_score(
+        logits,
+        labels,
+        task="binary",
+        ignore_index=ignore_index,
+    )
+    auroc_val = auroc(logits, labels, task="binary", ignore_index=ignore_index)
+    auprc = average_precision(logits, labels, task="binary", ignore_index=ignore_index)
+
+    return {
+        f"{prefix}_auroc": auroc_val,
+        f"{prefix}_auprc": auprc,
+        f"{prefix}_accuracy": acc,
+        f"{prefix}_f1": f1,
+    }
