@@ -4,7 +4,7 @@ requires = [ "hatchling" ]
 
 [project]
 name = "bacformer"
-version = "0.0.1"
+version = "0.1.0"
 description = "Modeling bacterial genomes."
 readme = "README.md"
 license = { file = "LICENSE" }
