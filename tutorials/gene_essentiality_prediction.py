@@ -42,7 +42,7 @@ def run():
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
             protein_sequences_col="sequence",
-            max_n_proteins=9000,
+            max_n_proteins=8000,
         )
         # map the essentiality labels to a binary format
         dataset[split_name] = dataset[split_name].map(
@@ -76,8 +76,9 @@ def run():
         save_total_limit=1,
         learning_rate=0.00015,
         num_train_epochs=50,
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=4,
+        per_device_train_batch_size=2,
+        per_device_eval_batch_size=2,
+        gradient_accumulation_steps=8,
         seed=12,
         dataloader_num_workers=4,
         bf16=True,
