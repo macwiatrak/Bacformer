@@ -70,10 +70,10 @@ class BacformerForProteinClassification(BacformerPreTrainedModel):
             if self.config.problem_type == "regression":
                 loss = mse_loss(logits, labels)
             elif self.config.problem_type == "single_label_classification":
-                loss = binary_cross_entropy_with_logits(
-                    logits.view(-1), labels.view(-1).type_as(logits), reduction="mean"
-                )
-                # loss = cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
+                # loss = binary_cross_entropy_with_logits(
+                #     logits.view(-1), labels.view(-1).type_as(logits), reduction="mean"
+                # )
+                loss = cross_entropy(logits.view(-1, self.config.num_labels), labels.view(-1))
             elif (
                 self.config.problem_type == "multi_label_classification"
                 or self.config.problem_type == "binary_classification"

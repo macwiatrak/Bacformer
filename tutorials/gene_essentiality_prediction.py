@@ -11,7 +11,7 @@ from bacformer.modeling import (
 )
 from bacformer.pp import dataset_col_to_bacformer_inputs
 from datasets import load_dataset
-from transformers import EarlyStoppingCallback, TrainingArguments
+from transformers import AutoConfig, EarlyStoppingCallback, TrainingArguments
 
 
 def run():
@@ -34,8 +34,11 @@ def run():
     # load the Bacformer model for protein classification
     # for this task we use the Bacformer model trained on masked complete genomes
     # with a token (here protein) classification head
+    config = AutoConfig.from_pretrained("macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True)
+    config.num_labels = 1
+    config.problem_type = "binary_classification"
     bacformer_model = BacformerForProteinClassification.from_pretrained(
-        "macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True
+        "macwiatrak/bacformer-masked-complete-genomes", config=config, trust_remote_code=True
     ).to(torch.bfloat16)
     print("Nr of parameters:", sum(p.numel() for p in bacformer_model.parameters()))
     print("Nr of trainable parameters:", sum(p.numel() for p in bacformer_model.parameters() if p.requires_grad))
