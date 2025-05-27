@@ -42,7 +42,7 @@ def run():
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
             protein_sequences_col="sequence",
-            max_n_proteins=7000,
+            max_n_proteins=6000,
         )
         # map the essentiality labels to a binary format
         dataset[split_name] = dataset[split_name].map(
@@ -74,12 +74,12 @@ def run():
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=1,
-        learning_rate=0.001,
-        num_train_epochs=50,
+        learning_rate=0.00015,
+        num_train_epochs=100,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=16,
-        seed=12,
+        seed=42,
         dataloader_num_workers=4,
         bf16=True,
         metric_for_best_model="eval_macro_auroc",
@@ -88,7 +88,7 @@ def run():
     )
 
     # define a collate function for the dataset
-    collate_genome_samples_fn = partial(collate_genome_samples, SPECIAL_TOKENS_DICT["PAD"], 7000, 1000)
+    collate_genome_samples_fn = partial(collate_genome_samples, SPECIAL_TOKENS_DICT["PAD"], 6000, 1000)
     trainer = BacformerTrainer(
         model=bacformer_model,
         data_collator=collate_genome_samples_fn,
