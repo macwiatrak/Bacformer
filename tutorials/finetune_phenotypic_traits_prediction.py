@@ -53,7 +53,7 @@ def run():
         save_strategy="epoch",
         save_total_limit=1,
         learning_rate=0.00015,
-        num_train_epochs=50,
+        num_train_epochs=5,
         per_device_train_batch_size=1,
         per_device_eval_batch_size=1,
         gradient_accumulation_steps=8,
@@ -80,11 +80,19 @@ def run():
     # train the model
     trainer.train()
 
-    # evaluate the model on the validation set
-    val_output = trainer.predict(dataset["validation"])
-    print("Validation output:", val_output.metrics)
+    # evaluate the model on the test set
     test_output = trainer.predict(dataset["test"])
     print("Test output:", test_output.metrics)
+
+    # save the predictions and labels
+    torch.save(
+        {
+            "predictions": test_output.predictions,
+            "labels": test_output.label_ids,
+            "genome_name": dataset["test"]["genome_name"],
+        },
+        os.path.join(output_dir, "test_pheno_preds_and_labels.pt"),
+    )
 
     # use the trained model to predict the trait on a single new genome using an assembly
 
