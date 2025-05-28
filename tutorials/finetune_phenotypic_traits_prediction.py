@@ -25,7 +25,7 @@ def run():
 
     # embed the protein sequences with the ESM-2 base model
     for split_name in dataset.keys():
-        dataset[split_name] = dataset[split_name].take(50)
+        dataset[split_name] = dataset[split_name].select(range(30))
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
             protein_sequences_col="protein_sequence",
