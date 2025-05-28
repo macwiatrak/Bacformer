@@ -182,6 +182,7 @@ def collate_genome_samples(
             batch_first=True,
             padding_value=-100,
         )
+        print("Labels shape:", labels.shape, "prot_emb shape:", prot_emb.shape)
     else:
         labels = torch.tensor([])
 
