@@ -30,7 +30,7 @@ def run():
             dataset=dataset[split_name],
             protein_sequences_col="protein_sequence",
             max_n_proteins=7000,
-        ).rename_column("label", "labels")
+        )
 
     # load the Bacformer model for genome classification
     # for this task we use the Bacformer model trained on masked complete genomes
