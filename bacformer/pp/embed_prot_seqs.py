@@ -182,6 +182,7 @@ def embed_genome_protein_sequences(
     model_type: Literal["esm2", "esmc", "protbert"] = "esm2",
     batch_size: int = 64,
     max_seq_len: int = 1024,
+    max_n_proteins: int = 9000,
     genome_pooling_method: Literal["mean", "max"] = None,
     return_dict: bool = False,
 ) -> list[np.ndarray] | np.ndarray:
@@ -215,6 +216,7 @@ def embed_genome_protein_sequences(
             "protein_sequence": protein_sequences,
         }
     ).explode("protein_sequence")
+    prot_seqs_df = prot_seqs_df[:max_n_proteins]  # limit to max_n_proteins
     # get protein order which will be useful later
     prot_seqs_df["protein_index"] = range(len(prot_seqs_df))
     # get protein sequence length
@@ -370,6 +372,7 @@ def protein_seqs_to_bacformer_inputs(
         model_type=plm_model_type,
         batch_size=batch_size,
         max_seq_len=max_prot_seq_len,
+        max_n_proteins=max_n_proteins,
         genome_pooling_method=None,
     )
 
@@ -474,6 +477,7 @@ def protein_seqs_to_bacformer_embeddings(
         model_type=plm_model_type,
         batch_size=batch_size,
         max_seq_len=max_prot_seq_len,
+        max_n_proteins=max_n_proteins,
         genome_pooling_method=None,
     )
 
@@ -528,6 +532,7 @@ def dataset_col_to_bacformer_inputs(
             model_type=plm_model_type,
             batch_size=batch_size,
             max_seq_len=max_prot_seq_len,
+            max_n_proteins=max_n_proteins,
             genome_pooling_method=None,
             return_dict=True,
         ),
