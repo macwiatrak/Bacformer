@@ -432,7 +432,7 @@ def compute_bacformer_embeddings(
     elif genome_pooling_method == "max":
         return bacformer_embeddings.max(dim=1).values.cpu().squeeze().numpy()
 
-    return bacformer_embeddings.squeeze().cpu().numpy()
+    return bacformer_embeddings.squeeze().type(torch.float32).cpu().numpy()
 
 
 def protein_seqs_to_bacformer_embeddings(
