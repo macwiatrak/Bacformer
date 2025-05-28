@@ -82,3 +82,7 @@ def run():
     print("Test output:", test_output.metrics)
 
     # use the trained model to predict the trait on a single new genome using an assembly
+
+
+if __name__ == "__main__":
+    run()
