@@ -115,7 +115,7 @@ print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)  # (batc
 
 We provide a set of tutorials to help you get started with Bacformer. The tutorials cover the following topics:
 - [Bacformer for strain clustering](tutorials/strain_clustering_tutorial.ipynb)
-- [Finetuning Bacformer for essential genes prediction](tutorials/gene_essentiality_prediction_tutorial.ipynb)
+- [Finetuning Bacformer for essential genes prediction](tutorials/finetune_gene_essentiality_prediction_tutorial.ipynb)
 - [Bacformer for phenotypic traits prediction](tutorials/phenotypic_traits_prediction_tutorial.ipynb)
 - [Finetuning Bacformer for phenotypic traits prediction](tutorials/finetune_phenotypic_traits_prediction_tutorial.ipynb)
 
