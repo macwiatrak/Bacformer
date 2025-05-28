@@ -428,9 +428,9 @@ def compute_bacformer_embeddings(
 
     # perform genome pooling
     if genome_pooling_method == "mean":
-        return bacformer_embeddings.mean(dim=1).cpu().squeeze().numpy()
+        return bacformer_embeddings.mean(dim=1).type(torch.float32).cpu().squeeze().numpy()
     elif genome_pooling_method == "max":
-        return bacformer_embeddings.max(dim=1).values.cpu().squeeze().numpy()
+        return bacformer_embeddings.max(dim=1).values.type(torch.float32).cpu().squeeze().numpy()
 
     return bacformer_embeddings.squeeze().type(torch.float32).cpu().numpy()
 
