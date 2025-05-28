@@ -1,35 +1,20 @@
 import os
 from functools import partial
 
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
 import torch
 from bacformer.modeling import (
     SPECIAL_TOKENS_DICT,
     BacformerTrainer,
+    adjust_prot_labels,
     collate_genome_samples,
     compute_metrics_gene_essentiality_pred,
 )
 from bacformer.pp import dataset_col_to_bacformer_inputs
 from datasets import load_dataset
 from transformers import AutoConfig, AutoModelForTokenClassification, EarlyStoppingCallback, TrainingArguments
-
-
-def adjust_prot_labels(
-    labels: list[str],
-    special_tokens: torch.Tensor,
-    prot_emb_token_id: int = SPECIAL_TOKENS_DICT["PROT_EMB"],
-    ignore_index: int = -100,
-) -> dict[str, torch.Tensor]:
-    """Adjust the protein labels to a binary format ccounting for Bacformer."""
-    output = []
-    for token in special_tokens[0]:
-        # if the token is a protein embedding token, we pop the first label from the list
-        if token == prot_emb_token_id:
-            label = labels.pop(0)
-            output.append(1 if label == "Yes" else 0)
-        # if the token is a special token, we append the ignore index
-        else:
-            output.append(ignore_index)
-    return {"labels": torch.tensor(output, dtype=torch.long)}
 
 
 def run():
@@ -65,10 +50,12 @@ def run():
     print("Nr of parameters:", sum(p.numel() for p in bacformer_model.parameters()))
     print("Nr of trainable parameters:", sum(p.numel() for p in bacformer_model.parameters() if p.requires_grad))
 
-    # create a trainer
-    # get training args
+    # define the output directory for the model and metrics
     output_dir = "output/gene_essentiality_pred"
     os.makedirs(output_dir, exist_ok=True)
+
+    # create a trainer
+    # get training args
     training_args = TrainingArguments(
         output_dir=output_dir,
         eval_strategy="epoch",
@@ -99,29 +86,47 @@ def run():
         callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],
     )
 
-    # train the model
+    # train the model, takes around ~15 min on a single A100 GPU
     trainer.train()
 
-    # evaluate the model on the validation set
-    val_output = trainer.predict(dataset["validation"])
-    print("Validation output:", val_output.metrics)
+    # evaluate the model on the test set
     test_output = trainer.predict(dataset["test"])
     print("Test output:", test_output.metrics)
 
-    # investigate the predictions
-    test_output.predictions.squeeze(-1)
-    print(test_output.predictions.shape)
-    print(test_output.label_ids.shape)
+    # get the predictions and labels for a single genome from the test set
+    preds_strain = torch.sigmoid(torch.tensor(test_output.predictions.squeeze(-1)))[0]
+    labels_strain = torch.tensor(test_output.label_ids)[0]
+    genome_id = dataset["test"][0]["genome_id"]
 
-    torch.save(
-        {"predictions": test_output.predictions.squeeze(-1), "labels": test_output.label_ids},
-        "test_preds_and_labels.pt",
+    # make DF for plotting
+    df = pd.DataFrame({"probability": preds_strain.tolist(), "label": labels_strain.tolist()})
+    # remove the ignore index rows
+    df = df[df.label != -100]
+
+    # Create the KDE plot
+    plt.figure(figsize=(8, 6))
+    sns.kdeplot(
+        data=df[df["label"] == 0], x="probability", fill=True, color="blue", alpha=0.6, label="Non-essential genes"
     )
-    # save the predictions and labels
+    sns.kdeplot(
+        data=df[df["label"] == 1], x="probability", fill=True, color="goldenrod", alpha=0.6, label="Essential genes"
+    )
 
-    # plot the distribution of the predictions for a given genome of essential vs non-essential genes
+    # Add legend and labels
+    plt.title(f"Gene Essentiality Prediction for {genome_id}", fontsize=18)
+    plt.legend(fontsize=20, title_fontsize=20, frameon=False, loc="upper left")
+    plt.xlabel("", fontsize=12)
+    plt.ylabel("", fontsize=12)
+    plt.title("", fontsize=14)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.xlim(-0.1, 1.1)
 
-    # use the trained model to predict the trait on a single new genome using an assembly
+    # Show the plot
+    plt.tight_layout()
+    plt.show()
+
+    # TODO: use the trained model to predict the trait on a single new genome using an assembly
 
 
 if __name__ == "__main__":
