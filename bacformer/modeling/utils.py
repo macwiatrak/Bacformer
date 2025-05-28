@@ -227,3 +227,22 @@ def compute_metrics_binary_genome_pred(preds: EvalPrediction, ignore_index: int 
         f"{prefix}_accuracy": acc,
         f"{prefix}_f1": f1,
     }
+
+
+def adjust_prot_labels(
+    labels: list[str],
+    special_tokens: torch.Tensor,
+    prot_emb_token_id: int = SPECIAL_TOKENS_DICT["PROT_EMB"],
+    ignore_index: int = -100,
+) -> dict[str, torch.Tensor]:
+    """Adjust the protein labels to a binary format ccounting for Bacformer."""
+    output = []
+    for token in special_tokens[0]:
+        # if the token is a protein embedding token, we pop the first label from the list
+        if token == prot_emb_token_id:
+            label = labels.pop(0)
+            output.append(1 if label == "Yes" else 0)
+        # if the token is a special token, we append the ignore index
+        else:
+            output.append(ignore_index)
+    return {"labels": torch.tensor(output, dtype=torch.long)}

@@ -16,7 +16,7 @@ from .modeling_tasks import (
     BacformerForProteinProteinInteraction,
 )
 from .trainer import BacformerTrainer
-from .utils import compute_metrics_binary_genome_pred, compute_metrics_gene_essentiality_pred
+from .utils import adjust_prot_labels, compute_metrics_binary_genome_pred, compute_metrics_gene_essentiality_pred
 
 __all__ = [
     "BacformerModel",
@@ -33,4 +33,5 @@ __all__ = [
     "BacformerTrainer",
     "compute_metrics_gene_essentiality_pred",
     "compute_metrics_binary_genome_pred",
+    "adjust_prot_labels",
 ]
