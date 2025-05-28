@@ -184,7 +184,6 @@ def collate_genome_samples(
         )
     elif "label" in samples[0]:
         labels = torch.tensor([sample["label"] for sample in samples], dtype=torch.long)
-        print("labels shape:", labels.shape)
     else:
         labels = torch.tensor([])
 
