@@ -17,7 +17,7 @@ def run():
         dataset=dataset,
         protein_sequences_col="protein_sequence",
         bacformer_model_path="macwiatrak/bacformer-masked-MAG",
-        max_n_proteins=9000,
+        max_n_proteins=6000,
         genome_pooling_method="mean",
     )
 
