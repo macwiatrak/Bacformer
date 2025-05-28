@@ -27,7 +27,7 @@ def run():
     for split_name in dataset.keys():
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
-            protein_sequences_col="sequence",
+            protein_sequences_col="protein_sequence",
             max_n_proteins=7000,
         )
 
