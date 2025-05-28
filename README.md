@@ -51,12 +51,18 @@ recommend using the [faplm](https://github.com/pengzhangzhi/faplm) package to co
 
 ### Installation
 
-You can install Bacformer using `pip`
-```bash
-pip install bacformer
-```
+[//]: # (You can install Bacformer using `pip`)
 
-by cloning the repository and installing the dependencies:
+[//]: # (```bash)
+
+[//]: # (pip install bacformer)
+
+[//]: # (```)
+
+[//]: # ()
+[//]: # (by cloning the repository and installing the dependencies:)
+
+You can install Bacformer by cloning the repository and installing the dependencies.
 ```bash
 git clone https://github.com/macwiatrak/Bacformer.git
 cd Bacformer
@@ -108,12 +114,12 @@ print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)  # (batc
 ### Tutorials
 
 We provide a set of tutorials to help you get started with Bacformer. The tutorials cover the following topics:
-- [Bacformer for strain clustering](tutorials/strain_clustering.ipynb)
-- [Bacformer for essential genes prediction](tutorials/essential_genes_prediction.ipynb)
-- [Bacformer for operon prediction](tutorials/operon_prediction.ipynb)
-- [Bacformer for protein–protein interaction prediction](tutorials/protein_protein_interaction_prediction.ipynb)
-- [Bacformer for phenotypic traits prediction](tutorials/phenotypic_traits_prediction.ipynb)
-- [Bacformer for scalable search of similar bacteria](tutorials/scalable_search_of_similar_bacteria.ipynb)
+- [Bacformer for strain clustering](tutorials/strain_clustering_tutorial.ipynb)
+- [Finetuning Bacformer for essential genes prediction](tutorials/gene_essentiality_prediction_tutorial.ipynb)
+- [Bacformer for phenotypic traits prediction](tutorials/phenotypic_traits_prediction_tutorial.ipynb)
+- [Finetuning Bacformer for phenotypic traits prediction](tutorials/finetune_phenotypic_traits_prediction_tutorial.ipynb)
+
+We are actively working on more tutorials, so stay tuned! If you have any suggestions for tutorials, please let us know by raising an issue in the [issue tracker][issue tracker].
 
 ## HuggingFace
 
