@@ -28,7 +28,7 @@ def run():
         dataset[split_name] = dataset_col_to_bacformer_inputs(
             dataset=dataset[split_name],
             protein_sequences_col="sequence",
-            max_n_proteins=9000,
+            max_n_proteins=7000,
         )
 
     # load the Bacformer model for genome classification
