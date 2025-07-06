@@ -18,7 +18,7 @@ if __name__ == "__main__":
         protein_sequences_col="protein_sequence",
         bacformer_model_path="macwiatrak/bacformer-masked-complete-genomes",
         max_n_proteins=9000,
-        genome_pooling_method="mean",
+        genome_pooling_method=None,
     ).to_pandas()
 
     # explode the dataset by contig, this allows prediction per contig
