@@ -397,6 +397,7 @@ def compute_bacformer_embeddings(
     max_n_proteins: int = 9000,
     max_n_contigs: int = 1000,
     genome_pooling_method: Literal["mean", "max"] = None,
+    keep_special_tokens: bool = False,
 ) -> np.ndarray:
     """Compute Bacformer embeddings for a list of protein embeddings.
 
@@ -435,6 +436,11 @@ def compute_bacformer_embeddings(
     elif genome_pooling_method == "max":
         return bacformer_embeddings.max(dim=1).values.type(torch.float32).cpu().squeeze().numpy()
 
+    if keep_special_tokens:
+        return bacformer_embeddings.squeeze().type(torch.float32).cpu().numpy()
+
+    # if we don't pool, we need to keep only the protein embeddings
+    bacformer_embeddings = bacformer_embeddings[inputs["special_tokens_mask"] == SPECIAL_TOKENS_DICT["PROT_EMB"]]
     return bacformer_embeddings.squeeze().type(torch.float32).cpu().numpy()
 
 
