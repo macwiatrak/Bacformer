@@ -31,7 +31,7 @@ if __name__ == "__main__":
             "end",
             "strand",
             "protein_id",
-            "protein_sequence",
+            "embeddings",
             "operon_prot_indices",
         ]
     )
