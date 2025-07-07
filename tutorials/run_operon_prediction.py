@@ -15,8 +15,8 @@ if __name__ == "__main__":
     # embed the protein sequences with Bacformer and convert to pandas
     df = embed_dataset_col_with_bacformer(
         dataset=dataset,
-        protein_sequences_col="protein_sequence",
-        bacformer_model_path="macwiatrak/bacformer-masked-complete-genomes",
+        model_path="macwiatrak/bacformer-masked-complete-genomes",
+        model_type="bacformer",
         max_n_proteins=9000,
         genome_pooling_method=None,
     ).to_pandas()
