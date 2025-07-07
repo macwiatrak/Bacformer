@@ -483,14 +483,14 @@ def get_prot_seq_col_name(cols: list[str]) -> str:
 def embed_dataset_col_with_bacformer(
     dataset: Dataset | None,
     model_path: str,
-    model_type: Literal["esm2", "esmc", "protbert", "bacformer"],
+    model_type: Literal["esm2", "esmc", "protbert", "bacformer"] = "bacformer",
     batch_size: int = 64,
     max_prot_seq_len: int = 1024,
     device: str = None,
     output_col: str = "embeddings",
     genome_pooling_method: Literal["mean", "max"] = None,
-    max_n_proteins: int = 9000,  # for Bacformer
-    max_n_contigs: int = 1000,  # for Bacformer
+    max_n_proteins: int = 9000,
+    max_n_contigs: int = 1000,
 ):
     """Run script to embed protein sequences with various models.
 

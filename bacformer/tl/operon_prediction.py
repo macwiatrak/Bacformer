@@ -26,13 +26,13 @@ def operon_prot_indices_to_pairwise_labels(operon_prot_indices: list[list[int]],
     return binary
 
 
-def get_intergenic_bp_dist(starts: list[int], ends: list[int]) -> list[int]:
+def get_intergenic_bp_dist(starts: list[int], ends: list[int]) -> np.ndarray:
     """Compute intergenic distances in base pairs between genes."""
     out = []
     for idx in range(len(starts) - 1):
         d = starts[idx + 1] - ends[idx]
         out.append(d)
-    return out
+    return np.array(out)
 
 
 def predict_pairwise_operon_boundaries(

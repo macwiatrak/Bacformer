@@ -1,5 +1,6 @@
 from .download import download_genome_assembly_by_taxid, download_refseq_assembly_entrez  # noqa
 from .embed_prot_seqs import (
+    protein_embeddings_to_inputs,
     generate_protein_embeddings,
     compute_genome_protein_embeddings,
     load_plm,
@@ -11,6 +12,7 @@ from .embed_prot_seqs import (
 
 __all__ = [
     "load_plm",
+    "protein_embeddings_to_inputs",
     "generate_protein_embeddings",
     "compute_genome_protein_embeddings",
     "load_plm",

@@ -1,3 +1,4 @@
+import numpy as np
 from bacformer.pp.embed_prot_seqs import embed_dataset_col_with_bacformer
 from bacformer.tl import (
     get_intergenic_bp_dist,
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     # run the operon prediction
     df["operon_pairwise_scores"] = df.apply(
         lambda row: predict_pairwise_operon_boundaries(
-            emb=row["embeddings"],
+            emb=np.stack(row["embeddings"]),
             intergenic_bp=row["intergenic_bp"],
             strand=row["strand"],
             scale_bp=500,
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     df["operon_pairwise_labels"] = df.apply(
         lambda row: operon_prot_indices_to_pairwise_labels(
             operon_prot_indices=row["operon_prot_indices"],
-            n_genes=len(row["protein_sequence"]),
+            n_genes=len(row["embeddings"]),
         ),
         axis=1,
     )
