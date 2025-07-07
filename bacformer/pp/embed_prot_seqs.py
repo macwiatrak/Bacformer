@@ -69,6 +69,36 @@ def average_unpadded(
     return torch.stack(results, dim=0)
 
 
+def load_plm(
+    model_path: str = "facebook/esm2_t12_35M_UR50D", model_type: Literal["esm2", "esmc", "protbert"] = "esm2"
+) -> tuple[Callable, Callable]:
+    """Load specified pLM."""
+    if model_type.lower() not in ["esm2", "esmc", "protbert"]:
+        raise ValueError("Model currently not supported, please choose out of available models: ['esm2', 'esmc']")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if model_type.lower() == "esm2":
+        if faesm_installed:
+            model = FAEsmForMaskedLM.from_pretrained(model_path).to(device).eval().to(torch.float16)
+            tokenizer = model.tokenizer
+        else:
+            model = AutoModel.from_pretrained(model_path).to(device).eval()
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+    elif model_type.lower() == "esmc":
+        if not faesm_installed:
+            raise ValueError(
+                "ESMC only supported with faESM. Please consider installing faESM: https://github.com/pengzhangzhi/faplm"
+            )
+        model = ESMC.from_pretrained(model_path, use_flash_attn=True).to(device).eval().to(torch.float16)
+        tokenizer = model.tokenizer
+    else:
+        # load protbert
+        model = AutoModel.from_pretrained(model_path, torch_dtype=torch.float16).to(device).eval()
+        tokenizer = AutoTokenizer.from_pretrained(model_path, do_lower_case=False)
+
+    return model, tokenizer
+
+
 def protein_embeddings_to_inputs(
     protein_embeddings: list[list[np.ndarray]] | list[np.ndarray],
     max_n_proteins: int = 6000,
@@ -298,36 +328,6 @@ def compute_genome_protein_embeddings(
     return protein_embeddings
 
 
-def load_plm(
-    model_path: str = "facebook/esm2_t12_35M_UR50D", model_type: Literal["esm2", "esmc", "protbert"] = "esm2"
-) -> tuple[Callable, Callable]:
-    """Load specified pLM."""
-    if model_type.lower() not in ["esm2", "esmc", "protbert"]:
-        raise ValueError("Model currently not supported, please choose out of available models: ['esm2', 'esmc']")
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    if model_type.lower() == "esm2":
-        if faesm_installed:
-            model = FAEsmForMaskedLM.from_pretrained(model_path).to(device).eval().to(torch.float16)
-            tokenizer = model.tokenizer
-        else:
-            model = AutoModel.from_pretrained(model_path).to(device).eval()
-            tokenizer = AutoTokenizer.from_pretrained(model_path)
-    elif model_type.lower() == "esmc":
-        if not faesm_installed:
-            raise ValueError(
-                "ESMC only supported with faESM. Please consider installing faESM: https://github.com/pengzhangzhi/faplm"
-            )
-        model = ESMC.from_pretrained(model_path, use_flash_attn=True).to(device).eval().to(torch.float16)
-        tokenizer = model.tokenizer
-    else:
-        # load protbert
-        model = AutoModel.from_pretrained(model_path, torch_dtype=torch.float16).to(device).eval()
-        tokenizer = AutoTokenizer.from_pretrained(model_path, do_lower_case=False)
-
-    return model, tokenizer
-
-
 def compute_bacformer_embeddings(
     model: Callable,
     protein_embeddings: list[list[np.ndarray]] | list[np.ndarray],
@@ -480,7 +480,7 @@ def get_prot_seq_col_name(cols: list[str]) -> str:
     raise ValueError("No protein sequence column found in the dataframe.")
 
 
-def embed_dataset_col_with_bacformer(
+def embed_dataset_col(
     dataset: Dataset | None,
     model_path: str,
     model_type: Literal["esm2", "esmc", "protbert", "bacformer"] = "bacformer",
@@ -504,11 +504,6 @@ def embed_dataset_col_with_bacformer(
     :param genome_pooling_method: pooling method for the genome level embedding, one of ["mean", "max"]
     :param max_n_proteins: maximum number of proteins to use for each genome, only used for Bacformer
     :param max_n_contigs: maximum number of contigs to use for each genome, only used for Bacformer
-    :param start_idx: start index for slicing the dataset, if None, will use the whole dataset
-    :param end_idx: end index for slicing the dataset, if None, will use the whole dataset
-    :param streaming: if True, will load the dataset in streaming mode, useful for large datasets
-    :param save_every_n_rows: if set, will save the dataframe every n rows, only works for iterable datasets
-    :param output_dir: output directory for saving the dataframe, only used for iterable datasets and if save_every_n_rows is set
     :return: a pandas dataframe with the protein embeddings
     """
     # set device
@@ -565,3 +560,110 @@ def embed_dataset_col_with_bacformer(
         )
 
     return dataset
+
+
+def dataset_col_to_bacformer_inputs(
+    dataset: Dataset | None,
+    batch_size: int = 64,
+    max_prot_seq_len: int = 1024,
+    max_n_proteins: int = 9000,
+    max_n_contigs: int = 1000,
+):
+    """Run script to embed protein sequences with various models.
+
+    :param dataset: HuggingFace dataset
+    :param batch_size: batch size for embedding pLMs
+    :param max_prot_seq_len: max protein sequence length for embedding pLMs
+    :param max_n_proteins: maximum number of proteins to use for each genome, only used for Bacformer
+    :param max_n_contigs: maximum number of contigs to use for each genome, only used for Bacformer
+    :return: a pandas dataframe with the protein embeddings
+    """
+    # load pLM, we hardcode using ESM-2 as this is what Bacformer was trained on
+    model_type = "esm2"
+    model, tokenizer = load_plm("facebook/esm2_t12_35M_UR50D", model_type)
+
+    # embed protein sequences in the dataset
+    # get the protein sequence column name
+    prot_col = get_prot_seq_col_name(dataset.column_names)
+
+    # 1) embed every protein sequence in this split
+    dataset = dataset.map(
+        lambda row: add_protein_embeddings(
+            row=row,
+            prot_seq_col=prot_col,
+            output_col="embeddings",
+            model=model,
+            tokenizer=tokenizer,
+            model_type=model_type,
+            batch_size=batch_size,
+            max_prot_seq_len=max_prot_seq_len,
+            genome_pooling_method=None,
+        ),
+        batched=False,
+        remove_columns=[prot_col],
+    )
+
+    # protein embeddings to Bacformer inputs
+    dataset = dataset.map(
+        lambda row: protein_embeddings_to_inputs(
+            protein_embeddings=row["embeddings"],
+            max_n_proteins=max_n_proteins,
+            max_n_contigs=max_n_contigs,
+        ),
+        batched=False,
+        remove_columns=["embeddings"],
+    )
+    return dataset
+
+
+def protein_seqs_to_bacformer_inputs(
+    protein_sequences: list[str],
+    batch_size: int = 64,
+    max_prot_seq_len: int = 1024,
+    max_n_proteins: int = 6000,
+    max_n_contigs: int = 1000,
+    device: str = None,
+) -> dict[str, torch.Tensor]:
+    """Convert protein sequences to inputs for Bacformer model.
+
+    Args:
+        protein_sequences (List[str]): The protein sequences to convert.
+        batch_size (int): The batch size to use for processing.
+        max_prot_seq_len (int): The maximum protein sequence length for the model.
+        max_n_proteins (int): The maximum number of proteins to use for each genome.
+        max_n_contigs (int): The maximum number of contigs to use for each genome.
+
+    Returns
+    -------
+        dict: The inputs for the Bacformer model.
+    """
+    # load the model
+    # we hardcode using ESM-2 as this is what Bacformer was trained on
+    model_path = "facebook/esm2_t12_35M_UR50D"
+    model_type = "esm2"
+    model, tokenizer = load_plm(model_path=model_path, model_type=model_type)
+
+    # generate protein embeddings
+    protein_embeddings = compute_genome_protein_embeddings(
+        model=model,
+        tokenizer=tokenizer,
+        protein_sequences=protein_sequences,
+        model_type=model_type,
+        batch_size=batch_size,
+        max_prot_seq_len=max_prot_seq_len,
+        genome_pooling_method=None,
+    )
+
+    # convert protein embeddings to inputs
+    inputs = protein_embeddings_to_inputs(
+        protein_embeddings=protein_embeddings,
+        max_n_proteins=max_n_proteins,
+        max_n_contigs=max_n_contigs,
+        cls_token_id=SPECIAL_TOKENS_DICT["CLS"],
+        sep_token_id=SPECIAL_TOKENS_DICT["CLS"],
+        prot_emb_token_id=SPECIAL_TOKENS_DICT["PROT_EMB"],
+        end_token_id=SPECIAL_TOKENS_DICT["END"],
+    )
+
+    # move inputs to the same device as the model
+    return {k: v.to(device) for k, v in inputs.items()}

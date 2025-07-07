@@ -7,7 +7,14 @@ from .embed_prot_seqs import (
     compute_bacformer_embeddings,
     add_protein_embeddings,
     add_bacformer_embeddings,
-    embed_dataset_col_with_bacformer,
+    embed_dataset_col,
+    dataset_col_to_bacformer_inputs,
+    protein_seqs_to_bacformer_inputs,
+)
+from .preprocess import (
+    extract_protein_info_from_genbank,
+    extract_protein_info_from_gff,
+    preprocess_genome_assembly,
 )
 
 __all__ = [
@@ -19,5 +26,10 @@ __all__ = [
     "compute_bacformer_embeddings",
     "add_protein_embeddings",
     "add_bacformer_embeddings",
-    "embed_dataset_col_with_bacformer",
+    "embed_dataset_col",
+    "dataset_col_to_bacformer_inputs",
+    "protein_seqs_to_bacformer_inputs",
+    "extract_protein_info_from_genbank",
+    "extract_protein_info_from_gff",
+    "preprocess_genome_assembly",
 ]

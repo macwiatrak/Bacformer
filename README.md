@@ -72,9 +72,41 @@ pip install .
 pip install ".[faesm]"
 ```
 
+<details>
+<summary>Have trouble installing bacformer?</summary>
+
+create clean conda env, and install the `cuda-toolkit 12.1.0` for compilation:
+```bash
+# Create new environment with Python 3.10
+micromamba create -n bacformer python=3.10 -y
+
+# Activate the environment
+micromamba activate bacformer
+
+# Install CUDA toolkit
+micromamba install -c nvidia/label/cuda-12.1.0 cuda-toolkit -y
+
+# Install PyTorch with CUDA support (using pip for latest version)
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+
+# Install flash-attention
+pip install flash-attn --no-build-isolation --no-cache-dir
+
+# Optional: verify installations
+python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
+python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+```
+
+Another workaround is docker container. You can use the official nvidia pytorch [containers](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) which have all the dependencies for flash attention.
+</details>
+
 ## Usage
 
-Below is an example of how to use Bacformer to compute contextual protein embeddings.
+Below is an example of how to use Bacformer to compute contextual protein embeddin.
+
+Below are examples on how to use Bacformer to compute contextual protein embeddings.
+
+### Computing contextual protein embeddings on a set of toy protein sequences
 
 ```python
 import torch
@@ -109,6 +141,86 @@ with torch.no_grad():
 
 print('last hidden state shape:', outputs["last_hidden_state"].shape)  # (batch_size, max_length, hidden_size)
 print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)  # (batch_size, hidden_size)
+```
+
+### Processing and embedding whole bacterial genome
+
+Download and process a whole bacterial genome from GenBank (in this case, `Pseudomonas aeruginosa PAO1` genome)
+and compute contextualized protein embeddings with Bacformer.
+
+```python
+import torch
+from bacformer.modeling import BacformerModel
+from bacformer.pp import preprocess_genome_assembly, protein_seqs_to_bacformer_inputs
+
+
+# preprocess a bacterial genome assembly
+genome_info = preprocess_genome_assembly(filepath="files/pao1.gbff")
+
+# load the model
+device = "cuda:0"
+model = BacformerModel.from_pretrained("macwiatrak/masked-complete-genomes").to(device).eval().to(torch.bfloat16)
+
+
+# embed the proteins with ESM-2 to get average protein embeddings
+inputs = protein_seqs_to_bacformer_inputs(
+    genome_info['protein_sequence'],
+    device=device,
+    batch_size=128,  # the batch size for computing the protein embeddings
+    max_n_proteins=6000,  # the maximum number of proteins Bacformer was trained with
+)
+
+# move the inputs to the device
+inputs = {k: v.to(device) for k, v in inputs.items()}
+# compute contextualized protein embeddings with Bacformer
+with torch.no_grad():
+    outputs = model(**inputs, return_dict=True)
+
+# the resulting contextalized protein embeddings can be used for analysis
+print('last hidden state shape:', outputs["last_hidden_state"].shape) # (batch_size, max_length, hidden_size)
+```
+
+### Embed dataset column with Bacformer
+
+Use Bacformer to embed a column of protein sequences from a HuggingFace dataset. The example below can be easily adapted
+to a pandas DataFrame or any other data structure containing protein sequences.
+
+Below we show how to compute contextualised protein embeddings for all proteins present in the genome required for operon prediction,
+or how to compute a single genome embedding for a set of genomes required for strain clustering.
+
+```python
+from bacformer.pp import embed_dataset_col
+from datasets import load_dataset
+
+
+# load the operon dataset from long-read RNA sequencing
+operon_dataset = load_dataset("macwiatrak/operon-identification-long-read-rna-sequencing", split="test")
+
+# embed the protein sequences with Bacformer
+# we compute contextualized protein embeddings for all proteins in the genome
+operon_dataset = embed_dataset_col(
+    dataset=operon_dataset,
+    model_path="macwiatrak/bacformer-masked-complete-genomes",
+    max_n_proteins=9000,
+    genome_pooling_method=None,  # set to None to get embeddings for all proteins in the genome
+)
+
+
+# load the strain clustering toy dataset
+strain_clustering_dataset = load_dataset("macwiatrak/strain-clustering-protein-sequences-sample", split="train")
+
+# embed the protein sequences with Bacformer
+# use mean genome pooling as we need a single genome embedding for each genome for clustering
+strain_clustering_dataset = embed_dataset_col(
+    dataset=strain_clustering_dataset,
+    model_path="macwiatrak/bacformer-masked-MAG",
+    max_n_proteins=9000,
+    genome_pooling_method="mean",
+)
+
+# convert to pandas and print the first 5 rows
+strain_clustering_df = strain_clustering_dataset.to_pandas()
+strain_clustering_df.head()
 ```
 
 ### Tutorials
