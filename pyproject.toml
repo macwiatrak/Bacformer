@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Modeling bacterial genomes."
 readme = { file = "README.md", content-type = "text/markdown" }
 keywords = [ "bacteria", "bioinformatics", "genomics", "prokaryotes", "transformers" ]
-license = { text = "Apache-2.0", file = "LICENSE" }
+license = "Apache-2.0"
+license-files = [ "LICENSE" ]
 maintainers = [
   { name = "Maciej Wiatrak", email = "macwiatrak@gmail.com" },
 ]
