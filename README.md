@@ -51,18 +51,15 @@ recommend using the [faplm](https://github.com/pengzhangzhi/faplm) package to co
 
 ### Installation
 
-[//]: # (You can install Bacformer using `pip`)
+We recommend to firstly install [PyTorch](https://pytorch.org/get-started/locally/) 2.2 or above (`pip install "torch>=2.2"`),
+then installing [flash attention](https://github.com/Dao-AILab/flash-attention) (`pip install flash-attn --no-build-isolation`),
+and finally installing bacformer via pip:
+```bash
+pip install bacformer
+```
 
-[//]: # (```bash)
+or by cloning the repository and installing the dependencies:
 
-[//]: # (pip install bacformer)
-
-[//]: # (```)
-
-[//]: # ()
-[//]: # (by cloning the repository and installing the dependencies:)
-
-You can install Bacformer by cloning the repository and installing the dependencies.
 ```bash
 git clone https://github.com/macwiatrak/Bacformer.git
 cd Bacformer
@@ -73,7 +70,7 @@ pip install ".[faesm]"
 ```
 
 <details>
-<summary>Have trouble installing bacformer?</summary>
+<summary>Have trouble installing flash attention or bacformer?</summary>
 
 create clean conda env, and install the `cuda-toolkit 12.1.0` for compilation:
 ```bash
@@ -95,6 +92,12 @@ pip install flash-attn --no-build-isolation --no-cache-dir
 # Optional: verify installations
 python -c "import torch; print(f'PyTorch version: {torch.__version__}')"
 python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')"
+
+# install faesm package for fast ESM-2 embeddings (recommended)
+pip install faesm[flash_attn]
+
+# finally, install the bacformer package
+pip install bacformer
 ```
 
 Another workaround is docker container. You can use the official nvidia pytorch [containers](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch) which have all the dependencies for flash attention.
