@@ -102,8 +102,6 @@ Another workaround is docker container. You can use the official nvidia pytorch 
 
 ## Usage
 
-Below is an example of how to use Bacformer to compute contextual protein embeddin.
-
 Below are examples on how to use Bacformer to compute contextual protein embeddings.
 
 ### Computing contextual protein embeddings on a set of toy protein sequences
@@ -135,7 +133,7 @@ inputs = protein_seqs_to_bacformer_inputs(
 
 # move the inputs to the device
 inputs = {k: v.to(device) for k, v in inputs.items()}
-# compute contextualized protein embeddings with Bacformer
+# compute contextualised protein embeddings with Bacformer
 with torch.no_grad():
     outputs = model(**inputs, return_dict=True)
 
@@ -145,8 +143,8 @@ print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)  # (batc
 
 ### Processing and embedding whole bacterial genome
 
-Download and process a whole bacterial genome from GenBank (in this case, `Pseudomonas aeruginosa PAO1` genome)
-and compute contextualized protein embeddings with Bacformer.
+Process a whole bacterial genome assembly from GenBank (in this case, `Pseudomonas aeruginosa PAO1` genome)
+and compute contextualised protein embeddings with Bacformer.
 
 ```python
 import torch
@@ -172,7 +170,7 @@ inputs = protein_seqs_to_bacformer_inputs(
 
 # move the inputs to the device
 inputs = {k: v.to(device) for k, v in inputs.items()}
-# compute contextualized protein embeddings with Bacformer
+# compute contextualised protein embeddings with Bacformer
 with torch.no_grad():
     outputs = model(**inputs, return_dict=True)
 
@@ -197,7 +195,7 @@ from datasets import load_dataset
 operon_dataset = load_dataset("macwiatrak/operon-identification-long-read-rna-sequencing", split="test")
 
 # embed the protein sequences with Bacformer
-# we compute contextualized protein embeddings for all proteins in the genome
+# we compute contextualised protein embeddings for all proteins in the genome
 operon_dataset = embed_dataset_col(
     dataset=operon_dataset,
     model_path="macwiatrak/bacformer-masked-complete-genomes",
@@ -230,6 +228,7 @@ We provide a set of tutorials to help you get started with Bacformer. The tutori
 - [Finetuning Bacformer for essential genes prediction](tutorials/finetune_gene_essentiality_prediction_tutorial.ipynb)
 - [Bacformer for phenotypic traits prediction](tutorials/phenotypic_traits_prediction_tutorial.ipynb)
 - [Finetuning Bacformer for phenotypic traits prediction](tutorials/finetune_phenotypic_traits_prediction_tutorial.ipynb)
+- [Zero-shot operon identification with Bacformer](tutorials/zero_shot_operon_prediction.ipynb)
 
 We are actively working on more tutorials, so stay tuned! If you have any suggestions for tutorials, please let us know by raising an issue in the [issue tracker][issue tracker].
 
