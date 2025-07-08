@@ -31,7 +31,7 @@ dependencies = [
   "accelerate>=0.28",
   "biopython>=1.83",
   "dataclasses-json>=0.6.1",
-  "datasets>=2.18",
+  "datasets>=2.21",
   "hf-xet>=1.0.5",
   "igraph>=0.11.8",
   "leidenalg~=0.10.2",
@@ -70,6 +70,9 @@ optional-dependencies.docs = [
 optional-dependencies.faesm = [
   "faesm[flash-attn]>=0.1.1",
   "flash-attn>=0.2",
+]
+optional-dependencies.faiss = [
+  "faiss-cpu",
 ]
 optional-dependencies.notebook = [ "ipywidgets", "jupyterlab" ]
 optional-dependencies.test = [
