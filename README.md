@@ -131,8 +131,6 @@ inputs = protein_seqs_to_bacformer_inputs(
     max_n_proteins=6000,  # the maximum number of proteins Bacformer was trained with
 )
 
-# move the inputs to the device
-inputs = {k: v.to(device) for k, v in inputs.items()}
 # compute contextualised protein embeddings with Bacformer
 with torch.no_grad():
     outputs = model(**inputs, return_dict=True)
