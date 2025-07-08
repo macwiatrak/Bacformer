@@ -102,19 +102,19 @@ Another workaround is docker container. You can use the official nvidia pytorch 
 
 ## Usage
 
-Below is an example of how to use Bacformer to compute contextual protein embeddin.
-
 Below are examples on how to use Bacformer to compute contextual protein embeddings.
 
 ### Computing contextual protein embeddings on a set of toy protein sequences
 
 ```python
 import torch
-from bacformer.modeling import BacformerModel
+from transformers import AutoModel
 from bacformer.pp import protein_seqs_to_bacformer_inputs
 
 device = "cuda:0"
-model = BacformerModel.from_pretrained("macwiatrak/bacformer-causal-MAG").to(device).eval().to(torch.bfloat16)
+model = AutoModel.from_pretrained(
+    "macwiatrak/bacformer-masked-MAG", trust_remote_code=True
+).to(device).eval().to(torch.bfloat16)
 
 # Example input: a sequence of protein sequences
 # in this case: 4 toy protein sequences
@@ -133,24 +133,24 @@ inputs = protein_seqs_to_bacformer_inputs(
     max_n_proteins=6000,  # the maximum number of proteins Bacformer was trained with
 )
 
-# move the inputs to the device
-inputs = {k: v.to(device) for k, v in inputs.items()}
-# compute contextualized protein embeddings with Bacformer
+# compute contextualised protein embeddings with Bacformer
 with torch.no_grad():
     outputs = model(**inputs, return_dict=True)
 
-print('last hidden state shape:', outputs["last_hidden_state"].shape)  # (batch_size, max_length, hidden_size)
-print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)  # (batch_size, hidden_size)
+# (batch_size, n_prots + special tokens or max_n_proteins, embedding_dim)
+print('last hidden state shape:', outputs["last_hidden_state"].shape)
+# (batch_size, embedding_dim)
+print('genome embedding:', outputs.last_hidden_state.mean(dim=1).shape)
 ```
 
 ### Processing and embedding whole bacterial genome
 
-Download and process a whole bacterial genome from GenBank (in this case, `Pseudomonas aeruginosa PAO1` genome)
-and compute contextualized protein embeddings with Bacformer.
+Process a whole bacterial genome assembly from GenBank (in this case, `Pseudomonas aeruginosa PAO1` genome)
+and compute contextualised protein embeddings with Bacformer.
 
 ```python
 import torch
-from bacformer.modeling import BacformerModel
+from transformers import AutoModel
 from bacformer.pp import preprocess_genome_assembly, protein_seqs_to_bacformer_inputs
 
 
@@ -159,7 +159,9 @@ genome_info = preprocess_genome_assembly(filepath="files/pao1.gbff")
 
 # load the model
 device = "cuda:0"
-model = BacformerModel.from_pretrained("macwiatrak/masked-complete-genomes").to(device).eval().to(torch.bfloat16)
+model = AutoModel.from_pretrained(
+    "macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True
+).to(device).eval().to(torch.bfloat16)
 
 
 # embed the proteins with ESM-2 to get average protein embeddings
@@ -170,14 +172,12 @@ inputs = protein_seqs_to_bacformer_inputs(
     max_n_proteins=6000,  # the maximum number of proteins Bacformer was trained with
 )
 
-# move the inputs to the device
-inputs = {k: v.to(device) for k, v in inputs.items()}
-# compute contextualized protein embeddings with Bacformer
+# compute contextualised protein embeddings with Bacformer
 with torch.no_grad():
     outputs = model(**inputs, return_dict=True)
 
 # the resulting contextalized protein embeddings can be used for analysis
-print('last hidden state shape:', outputs["last_hidden_state"].shape) # (batch_size, max_length, hidden_size)
+print('last hidden state shape:', outputs["last_hidden_state"].shape)
 ```
 
 ### Embed dataset column with Bacformer
@@ -197,7 +197,7 @@ from datasets import load_dataset
 operon_dataset = load_dataset("macwiatrak/operon-identification-long-read-rna-sequencing", split="test")
 
 # embed the protein sequences with Bacformer
-# we compute contextualized protein embeddings for all proteins in the genome
+# we compute contextualised protein embeddings for all proteins in the genome
 operon_dataset = embed_dataset_col(
     dataset=operon_dataset,
     model_path="macwiatrak/bacformer-masked-complete-genomes",
@@ -230,6 +230,7 @@ We provide a set of tutorials to help you get started with Bacformer. The tutori
 - [Finetuning Bacformer for essential genes prediction](tutorials/finetune_gene_essentiality_prediction_tutorial.ipynb)
 - [Bacformer for phenotypic traits prediction](tutorials/phenotypic_traits_prediction_tutorial.ipynb)
 - [Finetuning Bacformer for phenotypic traits prediction](tutorials/finetune_phenotypic_traits_prediction_tutorial.ipynb)
+- [Zero-shot operon identification with Bacformer](tutorials/zero_shot_operon_prediction.ipynb)
 
 We are actively working on more tutorials, so stay tuned! If you have any suggestions for tutorials, please let us know by raising an issue in the [issue tracker][issue tracker].
 
@@ -241,15 +242,16 @@ Bacformer is integrated with [HuggingFace](https://huggingface.co/macwiatrak).
 import torch
 from transformers import AutoModel, AutoModelForMaskedLM, AutoModelForCausalLM
 
-# load the Bacformer model trained with an autoregressive objective
-causal_model = AutoModelForCausalLM.from_pretrained("macwiatrak/bacformer-causal-MAG", trust_remote_code=True).to(torch.bfloat16).eval()
+device = "cuda:0"
+# load the Bacformer model trained on MAGs with an autoregressive objective
+causal_model = AutoModelForCausalLM.from_pretrained("macwiatrak/bacformer-causal-MAG", trust_remote_code=True).to(torch.bfloat16).eval().to(device)
 
-# load the Bacformer model trained with a masked objective
-masked_model = AutoModelForMaskedLM.from_pretrained("macwiatrak/bacformer-masked-MAG", trust_remote_code=True).to(torch.bfloat16).eval()
+# load the Bacformer model trained on MAGs with a masked objective
+masked_model = AutoModelForMaskedLM.from_pretrained("macwiatrak/bacformer-masked-MAG", trust_remote_code=True).to(torch.bfloat16).eval().to(device)
 
 # load the Bacformer encoder model finetuned on complete genomes (i.e. without the protein family classification head)
 # we recommend using this model for complete genomes as a start for finetuning on your own dataset for all tasks except generation
-encoder_model = AutoModel.from_pretrained("macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True).to(torch.bfloat16).eval()
+encoder_model = AutoModel.from_pretrained("macwiatrak/bacformer-masked-complete-genomes", trust_remote_code=True).to(torch.bfloat16).eval().to(device)
 ```
 
 ## Pretrained model checkpoints
@@ -264,7 +266,6 @@ We provide a range of pretrained model checkpoints for Bacformer which are avail
 | `bacformer-masked-complete-genomes`                                     | Complete (i.e. uninterrupted)       | A `bacformer-masked-MAG` finetuned on a set of ~40 k complete genomes with a masked objective, randomly masking 15 % of the proteins.                                                                                                                               |
 | `bacformer-causal-protein-family-modeling-complete-genomes`             | Complete (i.e. uninterrupted)       | A `bacformer-causal-MAG` finetuned on a set of ~40 k complete genomes with an autoregressive objective. In contrast to other models, this model takes as input a protein-family token rather than the protein sequence, allowing generation of sequences of protein families. |
 | `bacformer-for-essential-genes-prediction`                              | Complete (i.e. uninterrupted)       | A `bacformer-masked-complete-genomes` finetuned on the essential-genes prediction task.                                                                                                                                                                             |
-| `bacformer-for-ppi-prediction`                                          | Complete (i.e. uninterrupted)       | A `bacformer-masked-complete-genomes` finetuned on the protein–protein interaction prediction task.                                                                                                                                                                 |
 
 
 

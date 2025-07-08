@@ -324,7 +324,7 @@ class BacformerEmbeddings(nn.Module):
         bs, seq_length, dim = protein_embeddings.shape
 
         # pass the pooled ESM protein embeddings through a linear layer
-        protein_embeddings = self.linear(protein_embeddings)
+        protein_embeddings = self.linear(protein_embeddings.type_as(self.linear.weight))
         protein_embeddings = torch.where(
             special_tokens_mask.unsqueeze(-1).repeat(1, 1, dim) == self.prot_emb_token_id,
             protein_embeddings,
