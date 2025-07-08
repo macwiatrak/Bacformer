@@ -6,31 +6,34 @@ requires = [ "hatchling" ]
 name = "bacformer"
 version = "0.1.0"
 description = "Modeling bacterial genomes."
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
+keywords = [ "bacteria", "bioinformatics", "genomics", "prokaryotes", "transformers" ]
 license = { file = "LICENSE" }
 maintainers = [
-  { name = "Maciek Wiatrak", email = "macwiatrak@gmail.com" },
+  { name = "Maciej Wiatrak", email = "macwiatrak@gmail.com" },
 ]
 authors = [
-  { name = "Maciek Wiatrak" },
+  { name = "Maciej Wiatrak" },
 ]
 requires-python = ">=3.10"
 classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
   "accelerate>=0.28",
   "biopython>=1.83",
-  "dataclasses>=0.6",
   "dataclasses-json>=0.6.1",
-  "datasets~=2.18.0",
-  "hf-xet~=1.0.5",
-  "igraph~=0.11.8",
-  "jupyterlab",
+  "datasets>=2.18",
+  "hf-xet>=1.0.5",
+  "igraph>=0.11.8",
   "leidenalg~=0.10.2",
   "pandas>=2.2.3",
   "pyarrow>=19.0.1",
@@ -38,7 +41,7 @@ dependencies = [
   # for debug logging (referenced from the issue template)
   "session-info",
   "tensorboardx>=2.6.2",
-  "torch~=2.5.1",
+  "torch>=2.5.1",
   "torchmetrics>=1.7.1",
   "transformers>=4.38.2",
   "typed-argument-parser>=1.8.1",
@@ -48,7 +51,7 @@ optional-dependencies.dev = [
   "pre-commit",
   "twine>=4.0.2",
 ]
-optional-dependencies.doc = [
+optional-dependencies.docs = [
   "docutils>=0.8,!=0.18.*,!=0.19.*",
   "ipykernel",
   "ipython",
@@ -66,26 +69,28 @@ optional-dependencies.doc = [
 ]
 optional-dependencies.faesm = [
   "faesm[flash-attn]>=0.1.1",
-  "flash-attn>=0.2",          # If you need the direct flash-attn package
+  "flash-attn>=0.2",
 ]
+optional-dependencies.notebook = [ "ipywidgets", "jupyterlab" ]
 optional-dependencies.test = [
   "coverage",
   "pytest",
 ]
-# https://docs.pypi.org/project_metadata/#project-urls
 urls.Documentation = "https://bacformer.readthedocs.io/"
 urls.Homepage = "https://github.com/macwiatrak/Bacformer"
 urls.Source = "https://github.com/macwiatrak/Bacformer"
 
 [tool.hatch.build.targets.wheel]
 packages = [ "bacformer" ]
+# Include any non-code resources here if needed:
+# include = ["bacformer/data/*.json"]
 
 [tool.hatch.envs.default]
 installer = "uv"
 features = [ "dev" ]
 
 [tool.hatch.envs.docs]
-features = [ "doc" ]
+features = [ "docs" ]
 scripts.build = "sphinx-build -M html docs docs/_build {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
@@ -128,6 +133,7 @@ lint.ignore = [
   "E731", # Do not assign a lambda expression, use a def -> lambda expression assignments are convenient
   "E741", # allow I, O, l as variable names -> I is the identity matrix
 ]
+
 lint.per-file-ignores."*/__init__.py" = [ "F401" ]
 lint.per-file-ignores."docs/*" = [ "I" ]
 lint.per-file-ignores."tests/*" = [ "D" ]

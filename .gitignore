@@ -18,3 +18,13 @@ __pycache__/
 # docs
 /docs/generated/
 /docs/_build/
+
+# IDE & editor settings
+.idea/
+.vscode/
+
+# CI / GitHub config kept only locally
+.github/
+
+# Jupyter artefacts
+tutorials/.ipynb_checkpoints/

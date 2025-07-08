@@ -1,4 +1,5 @@
 import gzip
+from typing import Any
 
 import pandas as pd
 from Bio import SeqIO
@@ -149,3 +150,53 @@ def extract_protein_info_from_gff(filepath):
     # Convert to DataFrame
     df = pd.DataFrame(genes)
     return df
+
+
+def preprocess_genome_assembly(filepath: str) -> dict[str, Any]:
+    """Preprocess a genome assembly file (GenBank or GFF) to extract protein information for Bacformer input.
+
+    Args:
+        filepath (str): Path to the genome assembly file (.gbff, .gbff.gz, .gff, or .gff.gz).
+
+    Returns
+    -------
+        pd.DataFrame: A DataFrame containing protein information.
+    """
+    if filepath.endswith((".gbff", ".gbff.gz")):
+        df = extract_protein_info_from_genbank(filepath)
+    elif filepath.endswith((".gff", ".gff.gz")):
+        df = extract_protein_info_from_gff(filepath)
+    else:
+        raise ValueError("Unsupported file format. Use .gbff, .gbff.gz, .gff, or .gff.gz.")
+
+    # groupby contig and aggregate protein information
+    df = (
+        df.groupby(["strain_name", "accession_id", "accession_name", "contig_idx"])[
+            ["gene_name", "protein_name", "start", "end", "protein_id", "protein_sequence"]
+        ]
+        .agg(list)
+        .reset_index()
+    )
+
+    # sort by contig_idx
+    df = df.sort_values(by="contig_idx", ascending=True)
+
+    # aggregate all contigs in the genome
+    df = (
+        df.groupby(["strain_name"])[
+            [
+                "accession_id",
+                "accession_name",
+                "contig_idx",
+                "gene_name",
+                "protein_name",
+                "start",
+                "end",
+                "protein_id",
+                "protein_sequence",
+            ]
+        ]
+        .agg(list)
+        .reset_index()
+    )
+    return dict(df.iloc[0])
