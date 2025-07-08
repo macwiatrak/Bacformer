@@ -6,7 +6,7 @@ from typing import Any, Literal
 from datasets import Dataset
 from transformers import AutoModel, AutoTokenizer
 
-from bacformer.modeling import SPECIAL_TOKENS_DICT
+from bacformer.modeling import SPECIAL_TOKENS_DICT, BacformerModel
 
 try:
     from faesm.esm import FAEsmForMaskedLM
@@ -187,6 +187,7 @@ def generate_protein_embeddings(
 
     Args:
         model (Callable): The pretrained model to use for generating embeddings.
+        tokenizer (Callable): The tokenizer to use for processing protein sequences.
         protein_sequences (List[str]): List of protein sequences to generate embeddings for.
         model_type (str): Type of the model, either "esm2" or "esmc".
         batch_size (int): Batch size for processing sequences.
@@ -336,19 +337,21 @@ def compute_bacformer_embeddings(
     max_n_contigs: int = 1000,
     genome_pooling_method: Literal["mean", "max"] = None,
     prot_emb_idx: int = 4,
-) -> np.ndarray:
+) -> np.ndarray | list[np.ndarray]:
     """Compute Bacformer embeddings for a list of protein embeddings.
 
     Args:
         model (BacformerModel): The Bacformer model to use for embedding.
         protein_embeddings (List[List[np.ndarray]]): The protein embeddings to compute the Bacformer embeddings for.
+        contig_ids (List[str]): The contig IDs corresponding to the protein embeddings.
         max_n_proteins (int): The maximum number of proteins to use for each genome.
         max_n_contigs (int): The maximum number of contigs to use for each genome.
         genome_pooling_method (str): The pooling method to use for the genome level embedding.
+        prot_emb_idx (int): The index of the protein embedding in the Bacformer output. Used to filter out special tokens.
 
     Returns
     -------
-        List[np.ndarray]: The Bacformer embeddings for the input protein embeddings.
+        Union[np.ndarray, list[np.ndarray]]: The contextual protein embeddings computed with Bacformer.
     """
     assert len(protein_embeddings) > 0, "Protein sequence list is empty, please include proteins in the list"
 
@@ -504,7 +507,7 @@ def embed_dataset_col(
     :param genome_pooling_method: pooling method for the genome level embedding, one of ["mean", "max"]
     :param max_n_proteins: maximum number of proteins to use for each genome, only used for Bacformer
     :param max_n_contigs: maximum number of contigs to use for each genome, only used for Bacformer
-    :return: a pandas dataframe with the protein embeddings
+    :return: a dataset with a column containing the model embeddings
     """
     # set device
     if device is None:
@@ -576,7 +579,7 @@ def dataset_col_to_bacformer_inputs(
     :param max_prot_seq_len: max protein sequence length for embedding pLMs
     :param max_n_proteins: maximum number of proteins to use for each genome, only used for Bacformer
     :param max_n_contigs: maximum number of contigs to use for each genome, only used for Bacformer
-    :return: a pandas dataframe with the protein embeddings
+    :return: a dataset with a column containing the Bacformer inputs
     """
     # load pLM, we hardcode using ESM-2 as this is what Bacformer was trained on
     model_type = "esm2"
@@ -632,6 +635,7 @@ def protein_seqs_to_bacformer_inputs(
         max_prot_seq_len (int): The maximum protein sequence length for the model.
         max_n_proteins (int): The maximum number of proteins to use for each genome.
         max_n_contigs (int): The maximum number of contigs to use for each genome.
+        device (str): The device to use for the model, if None, will use cuda if available.
 
     Returns
     -------
@@ -667,3 +671,61 @@ def protein_seqs_to_bacformer_inputs(
 
     # move inputs to the same device as the model
     return {k: v.to(device) for k, v in inputs.items()}
+
+
+def protein_seqs_to_bacformer_emb(
+    bacformer_model_path: str,
+    protein_sequences: list[str],
+    batch_size: int = 64,
+    max_prot_seq_len: int = 1024,
+    max_n_proteins: int = 9000,
+    max_n_contigs: int = 1000,
+    genome_pooling_method: Literal["mean", "max"] = None,
+) -> np.ndarray | list[np.ndarray]:
+    """Convert protein sequences to inputs for Bacformer model.
+
+    Args:
+        bacformer_model_path (str): The path to the Bacformer model.
+        protein_sequences (List[str]): The protein sequences to convert.
+        batch_size (int): The batch size to use for processing.
+        max_prot_seq_len (int): The maximum protein sequence length for the model.
+        max_n_proteins (int): The maximum number of proteins to use for each genome.
+        max_n_contigs (int): The maximum number of contigs to use for each genome.
+        genome_pooling_method (str): The pooling method to use for the genome level embedding, one of ["mean", "max", None],
+            where None means no pooling.
+
+    Returns
+    -------
+        dict: a numpy array of or list of numpy arrays with contextualised protein embeddings.
+    """
+    # load the model
+    # we hardcode using ESM-2 as this is what Bacformer was trained on
+    model_path = "facebook/esm2_t12_35M_UR50D"
+    model_type = "esm2"
+    model, tokenizer = load_plm(model_path=model_path, model_type=model_type)
+
+    # load Bacformer model
+    bacformer_model = BacformerModel.from_pretrained(bacformer_model_path).eval().to(torch.bfloat16)
+
+    # generate protein embeddings
+    protein_embeddings = compute_genome_protein_embeddings(
+        model=model,
+        tokenizer=tokenizer,
+        protein_sequences=protein_sequences,
+        model_type=model_type,
+        batch_size=batch_size,
+        max_prot_seq_len=max_prot_seq_len,
+        genome_pooling_method=None,
+    )
+
+    # convert protein embeddings to inputs
+    output = compute_bacformer_embeddings(
+        model=bacformer_model,
+        protein_embeddings=protein_embeddings,
+        contig_ids=None,
+        max_n_proteins=max_n_proteins,
+        max_n_contigs=max_n_contigs,
+        genome_pooling_method=genome_pooling_method,
+    )
+
+    return output
