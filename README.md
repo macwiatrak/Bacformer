@@ -70,7 +70,7 @@ pip install ".[faesm]"
 ```
 
 <details>
-<summary>Have trouble installing flash attention or bacformer?</summary>
+<summary>Have trouble installing?</summary>
 
 create clean conda env, and install the `cuda-toolkit 12.1.0` for compilation:
 ```bash
