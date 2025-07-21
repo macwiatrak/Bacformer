@@ -17,11 +17,12 @@ embeddings conditional on other proteis present in the genome. Bacformer is trai
 ![Bacformer](files/Bacformer.png)
 
 Bacformer can be applied to a wide range of tasks, including: strain clustering, essential genes prediction, operon identification,
-ppi prediction, protein function prediction and more. We provide [model checkpoints]() for pretrained models as well as Bacformer
+ppi prediction, protein function prediction and more. We provide model checkpoints for pretrained models as well as Bacformer
 finetuned for various tasks. We also provide tutorials and make Bacformer available via [HuggingFace](https://huggingface.co/macwiatrak).
 
 ## News
 
+- **2025-07-21**: Bacformer preprint is now available on [biorxiv](https://www.biorxiv.org/content/10.1101/2025.07.20.665723v1).
 - **2025-05-15**: Bacformer is now available on [HuggingFace](https://huggingface.co/macwiatrak).
 
 ## Contents
@@ -293,7 +294,20 @@ For questions, bugs, and feature requests, please raise an issue in the reposito
 
 ## Citation
 
-> t.b.a
+```bibtex
+@article{Wiatrak2025.07.20.665723,
+	author = {Wiatrak, Maciej and Vi{\~n}as Torn{\'e}, Ramon and Ntemourtsidou, Maria and Dinan, Adam M. and Abelson, David C. and Arora, Divya and Brbi{\'c}, Maria and Weimann, Aaron and Floto, Rodrigo Andres},
+	title = {A contextualised protein language model reveals the functional syntax of bacterial evolution},
+	elocation-id = {2025.07.20.665723},
+	year = {2025},
+	doi = {10.1101/2025.07.20.665723},
+	publisher = {Cold Spring Harbor Laboratory},
+	URL = {https://www.biorxiv.org/content/early/2025/07/20/2025.07.20.665723},
+	eprint = {https://www.biorxiv.org/content/early/2025/07/20/2025.07.20.665723.full.pdf},
+	journal = {bioRxiv}
+}
+```
+
 
 [uv]: https://github.com/astral-sh/uv
 [scverse discourse]: https://discourse.scverse.org/
