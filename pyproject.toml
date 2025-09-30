@@ -3,9 +3,9 @@ build-backend = "hatchling.build"
 requires = [ "hatchling" ]
 
 [project]
-name = "bacformer-release"
+name = "Bacfomrer"
 version = "0.0.1"
-description = "Generative modeling of whole bacterial genomes."
+description = "Modeling whole bacterial genomes with contextualised protein modeling."
 readme = "README.md"
 license = { file = "LICENSE" }
 maintainers = [
@@ -23,15 +23,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-  "accelerate>=0.28",
-  "biopython>=1.83",
-  "dataclasses>=0.6",
-  "dataclasses-json>=0.6.1",
+  "anndata",
   # for debug logging (referenced from the issue template)
-  "session-info",
-  "torch>=2.1",
-  "transformers>=4.39.2",
-  "typed-argument-parser>=1.8.1",
+  "session-info2",
 ]
 optional-dependencies.dev = [
   "pre-commit",
@@ -45,7 +39,7 @@ optional-dependencies.doc = [
   "pandas",
   # Until pybtex >0.24.0 releases: https://bitbucket.org/pybtex-devs/pybtex/issues/169/
   "setuptools",
-  "sphinx>=4",
+  "sphinx>=8.1",
   "sphinx-autodoc-typehints",
   "sphinx-book-theme>=1",
   "sphinx-copybutton",
@@ -54,16 +48,17 @@ optional-dependencies.doc = [
   "sphinxext-opengraph",
 ]
 optional-dependencies.test = [
-  "coverage",
+  "coverage>=7.10",
   "pytest",
+  "pytest-cov",     # For VS Code’s coverage functionality
 ]
 # https://docs.pypi.org/project_metadata/#project-urls
-urls.Documentation = "https://Bacformer-release.readthedocs.io/"
+urls.Documentation = "https://Bacfomrer.readthedocs.io/"
 urls.Homepage = "https://github.com/macwiatrak/Bacformer"
 urls.Source = "https://github.com/macwiatrak/Bacformer"
 
 [tool.hatch.build.targets.wheel]
-packages = [ "bacformer" ]
+packages = [ "src/bacformer" ]
 
 [tool.hatch.envs.default]
 installer = "uv"
@@ -71,17 +66,34 @@ features = [ "dev" ]
 
 [tool.hatch.envs.docs]
 features = [ "doc" ]
-scripts.build = "sphinx-build -M html docs docs/_build {args}"
+scripts.build = "sphinx-build -M html docs docs/_build -W {args}"
 scripts.open = "python -m webbrowser -t docs/_build/html/index.html"
 scripts.clean = "git clean -fdX -- {args:docs}"
 
+# Test the lowest and highest supported Python versions with normal deps
+[[tool.hatch.envs.hatch-test.matrix]]
+deps = [ "stable" ]
+python = [ "3.10", "3.13" ]
+
+# Test the newest supported Python version also with pre-release deps
+[[tool.hatch.envs.hatch-test.matrix]]
+deps = [ "pre" ]
+python = [ "3.13" ]
+
 [tool.hatch.envs.hatch-test]
-features = [ "test" ]
+features = [ "dev", "test" ]
+
+[tool.hatch.envs.hatch-test.overrides]
+# If the matrix variable `deps` is set to "pre",
+# set the environment variable `UV_PRERELEASE` to "allow".
+matrix.deps.env-vars = [
+  { key = "UV_PRERELEASE", value = "allow", if = [ "pre" ] },
+]
 
 [tool.ruff]
 line-length = 120
-src = [ "bacformer" ]
-extend-exclude = [ "*.ipynb" ]
+src = [ "src" ]
+extend-include = [ "*.ipynb" ]
 
 format.docstring-code-format = true
 
@@ -127,18 +139,19 @@ addopts = [
 
 [tool.coverage.run]
 source = [ "bacformer" ]
+patch = [ "subprocess" ]
 omit = [
   "**/test_*.py",
-  "tutorials/*",
 ]
 
 [tool.cruft]
 skip = [
   "tests",
+  "src/**/__init__.py",
+  "src/**/basic.py",
   "docs/api.md",
   "docs/changelog.md",
   "docs/references.bib",
   "docs/references.md",
   "docs/notebooks/example.ipynb",
-  "tutorials/*",
 ]
