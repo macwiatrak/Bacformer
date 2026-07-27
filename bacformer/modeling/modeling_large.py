@@ -851,6 +851,7 @@ class BacformerLargePreTrainedModel(PreTrainedModel):
         - Linear layers: Normal distribution with std=config.initializer_range
         - Embeddings: Normal distribution with std=config.initializer_range
         - LayerNorm: Weight=1.0, bias=0.0
+        - RotaryEmbedding: Non-persistent `inv_freq` buffer rebuilt analytically
         Args:
             module: The module to initialize.
         """
@@ -866,6 +867,9 @@ class BacformerLargePreTrainedModel(PreTrainedModel):
             if module.bias is not None:
                 module.bias.data.zero_()
             module.weight.data.fill_(1.0)
+        elif isinstance(module, RotaryEmbedding):
+            # Rebuild non-persistent RoPE buffers after meta-device loading (#33).
+            module.inv_freq.copy_(module._compute_inv_freq(module.inv_freq.device))
 
 
 class BacformerLargeModel(BacformerLargePreTrainedModel):
