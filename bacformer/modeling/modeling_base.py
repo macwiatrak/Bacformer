@@ -461,14 +461,19 @@ class BacformerEncoder(nn.Module):
             dropout=config.attention_probs_dropout_prob,
         )
 
+        freqs_cos, freqs_sin = self._compute_rotary_tables()
+        self.register_buffer("freqs_cos", freqs_cos, persistent=False)
+        self.register_buffer("freqs_sin", freqs_sin, persistent=False)
+
+    def _compute_rotary_tables(self) -> tuple[torch.Tensor, torch.Tensor]:
+        """Compute the analytic rotary tables for this encoder's config."""
         # Note that config.max_position_embeddings is multiplied by 1.5 because the token limit for the Bacformer of
         # models is 6000. Adding this multiplier instead of using 6000 directly allows for dynamism of token
         # lengths while training or fine-tuning.
-        freqs_cos, freqs_sin = precompute_freqs_cis(
-            config.hidden_size // config.num_attention_heads, int(config.max_position_embeddings * 1.5)
+        return precompute_freqs_cis(
+            self.config.hidden_size // self.config.num_attention_heads,
+            int(self.config.max_position_embeddings * 1.5),
         )
-        self.register_buffer("freqs_cos", freqs_cos, persistent=False)
-        self.register_buffer("freqs_sin", freqs_sin, persistent=False)
 
     def forward(
         self,
@@ -530,7 +535,8 @@ class BacformerPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["BacformerEmbeddings", "BacformerTransformerLayer"]
 
-    # Copied from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights
+    # Adapted from transformers.models.bert.modeling_bert.BertPreTrainedModel._init_weights,
+    # with an added branch that rebuilds the non-persistent RoPE buffers (#33).
     def _init_weights(self, module):
         """Initialize the weights"""
         if isinstance(module, nn.Linear):
@@ -546,6 +552,11 @@ class BacformerPreTrainedModel(PreTrainedModel):
         elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
+        elif isinstance(module, BacformerEncoder):
+            # Rebuild non-persistent RoPE buffers after meta-device loading (#33).
+            freqs_cos, freqs_sin = module._compute_rotary_tables()
+            module.freqs_cos.copy_(freqs_cos)
+            module.freqs_sin.copy_(freqs_sin)
 
 
 class BacformerModel(BacformerPreTrainedModel):
